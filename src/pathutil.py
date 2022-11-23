@@ -2,6 +2,7 @@ import pathlib
 import hashlib
 import os
 
+
 class PathUtil(pathlib.Path):
     _flavour = pathlib._windows_flavour if os.name == 'nt' else pathlib._posix_flavour
 
@@ -11,7 +12,7 @@ class PathUtil(pathlib.Path):
                 line = f.readline()
 
                 if line:
-                    yield line
+                    yield line.rstrip('\n')
                 else:
                     break
 
@@ -41,14 +42,15 @@ class PathUtil(pathlib.Path):
     def algorithms_available(self) -> set:
         return hashlib.algorithms_available
 
-    def eol_count(self, eol:str=None, size:int=None)->int:
+    def eol_count(self, eol: str = None, size: int = None) -> int:
         try:
             substr = eol.encode()
-        
+
         except AttributeError as e:
             substr = '\n'.encode()
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
+
 
 if __name__ == '__main__':
     pass
