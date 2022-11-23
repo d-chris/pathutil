@@ -18,6 +18,13 @@ def tmp_file(tmp_path: pathlib.Path) -> str:
     return str(txt)
 
 
+@pytest.fixture()
+def dst_path(tmp_path: pathlib.Path) -> str:
+    dest = tmp_path / 'destination'
+
+    return str(dest)
+
+
 def test_eol_count(tmp_file):
     p = PathUtil(tmp_file)
     assert p.eol_count() == 2
@@ -79,3 +86,30 @@ def test_main():
     p = subprocess.run('pipenv run src\\pathutil.py', shell=True)
 
     assert p.returncode == 0
+
+
+def test_copy(tmp_file, dst_path):
+    src = PathUtil(tmp_file)
+
+    result = src.copy(dst_path, mkdir=True)
+
+    assert isinstance(result, tuple)
+
+    dst, copied = result
+
+    assert copied == True
+    assert pathlib.Path(src).is_file() == True
+    assert dst == pathlib.Path(dst_path).joinpath(pathlib.Path(tmp_file).name)
+
+
+def test_move(tmp_file, dst_path):
+    src = PathUtil(tmp_file)
+
+    result = src.move(dst_path)
+
+    assert isinstance(result, tuple)
+
+    dst, moved = result
+
+    assert moved == True
+    assert pathlib.Path(src).is_file() == False
