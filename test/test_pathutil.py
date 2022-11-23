@@ -20,6 +20,7 @@ def my_file(tmp_path: pathlib.Path) -> str:
 def test_eol_count(my_file):
     p = PathUtil(my_file)
     assert p.eol_count() == 2
+    assert p.eol_count(eol='\r') == 0
 
 
 def test_hexdigest(my_file):
@@ -56,6 +57,7 @@ def test_iter_lines(my_file):
 
     my_generator = PathUtil(my_file).iter_lines()
 
+    assert inspect.isgenerator(my_generator)
     assert list(my_generator) == str(CONTENT).splitlines()
 
 

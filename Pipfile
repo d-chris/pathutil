@@ -8,6 +8,7 @@ name = "pypi"
 [dev-packages]
 pytest = "*"
 autopep8 = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.11"
