@@ -83,7 +83,7 @@ def test_iter_bytes(tmp_file):
 
 def test_main():
     ''' run script in virtual environment '''
-    p = subprocess.run('pipenv run src\\pathutil.py', shell=True)
+    p = subprocess.run('pipenv run src\\package\\pathutil.py', shell=True)
 
     assert p.returncode == 0
 
