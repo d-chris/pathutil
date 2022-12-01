@@ -59,7 +59,7 @@ class PathUtil(pathlib.Path):
 
         return h.hexdigest(**kwargs)
 
-    def digest(self, digest: str, *, size: int = None):
+    def digest(self, digest: str, *, size: int = None) -> 'hashlib._Hash':
 
         if size is None:
             kwargs = dict()
@@ -84,7 +84,7 @@ class PathUtil(pathlib.Path):
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
-    def copy(self, dst: str, mkdir: bool = None, **kwargs) -> tuple:
+    def copy(self, dst: str, mkdir: bool = None, **kwargs) -> tuple['PathUtil', int]:
         ''' copies self into a new destination, check distutils.file_util::copy_file for kwargs '''
 
         if mkdir is True:
@@ -96,14 +96,14 @@ class PathUtil(pathlib.Path):
 
         return (self.__class__(destination), result)
 
-    def move(self, dst: str, **kwargs) -> tuple:
+    def move(self, dst: str, **kwargs) -> tuple['PathUtil', int]:
         ''' moves self into a new destination, check shutil::move for kwargs '''
 
         destination = shutil.move(self, dst, **kwargs)
 
         dest = self.__class__(destination)
 
-        return (dest, dest.is_file())
+        return (dest, dest.exists())
 
 
 if __name__ == '__main__':
