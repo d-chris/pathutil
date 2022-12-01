@@ -8,7 +8,12 @@ import distutils.file_util as dfutil
 class PathUtil(pathlib.Path):
     _flavour = pathlib._windows_flavour if os.name == 'nt' else pathlib._posix_flavour
 
-    def iter_lines(self, encoding: str = None):
+    _digest_length = {
+        'shake_128': 128,
+        'shake_256': 256
+    }
+
+    def iter_lines(self, encoding: str = None) -> str:
         with super().open(mode='rt', encoding=encoding) as f:
             while True:
                 line = f.readline()
@@ -18,7 +23,7 @@ class PathUtil(pathlib.Path):
                 else:
                     break
 
-    def iter_bytes(self, size: int = None):
+    def iter_bytes(self, size: int = None) -> bytes:
         with super().open(mode='rb') as f:
             while True:
                 chunk = f.read(size)
@@ -28,7 +33,7 @@ class PathUtil(pathlib.Path):
                 else:
                     break
 
-    def hexdigest(self, algorithm: str = None, size: int = None) -> str:
+    def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
         try:
             h = hashlib.new(algorithm)
 
@@ -38,10 +43,36 @@ class PathUtil(pathlib.Path):
         for chunk in self.iter_bytes(size):
             h.update(chunk)
 
-        return h.hexdigest()
+        try:
+            bits = self._digest_length[algorithm]
+
+            if length <= 0:
+                raise ValueError(
+                    'length for digest needs do be a positive integer')
+
+            kwargs = {'length': length}
+
+        except KeyError as e:
+            kwargs = dict()
+        except TypeError as e:
+            kwargs = {'length': bits}
+
+        return h.hexdigest(**kwargs)
+
+    def digest(self, digest: str, *, size: int = None):
+
+        if size is None:
+            kwargs = dict()
+        else:
+            kwargs = {'_bufsize': size}
+
+        with self.open(mode='rb') as f:
+            h = hashlib.file_digest(f, digest, **kwargs)
+
+        return h
 
     @property
-    def algorithms_available(self) -> set:
+    def algorithms_available(self) -> set[str]:
         return hashlib.algorithms_available
 
     def eol_count(self, eol: str = None, size: int = None) -> int:

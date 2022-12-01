@@ -50,6 +50,31 @@ def test_hexdigest(tmp_file):
         p.hexdigest(size='fubar')
 
 
+def test_shake(tmp_file):
+    p = PathUtil(tmp_file)
+
+    assert len(p.hexdigest('shake_128')) == 128*2
+
+    length = 10
+
+    assert len(p.hexdigest('shake_128', length=length)) == length * 2
+
+    with pytest.raises(TypeError):
+        p.hexdigest('shake_128', length)
+
+    with pytest.raises(ValueError):
+        p.hexdigest('shake_256', length=-1)
+
+
+def test_digest(tmp_file):
+    p = PathUtil(tmp_file)
+
+    my_bytes = pathlib.Path(tmp_file).read_bytes()
+    md5 = hashlib.new('md5', my_bytes)
+
+    assert p.digest('md5').digest() == md5.digest()
+
+
 def test_available_algorithm():
     p = PathUtil()
 
