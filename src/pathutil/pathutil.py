@@ -13,6 +13,12 @@ class PathUtil(pathlib.Path):
         'shake_256': 256
     }
 
+    _digest_default = hashlib.md5
+
+    @property
+    def default_digest(self) -> 'hashlib._Hash':
+        return self._digest_default
+
     def iter_lines(self, encoding: str = None) -> str:
         with super().open(mode='rt', encoding=encoding) as f:
             while True:
@@ -38,7 +44,7 @@ class PathUtil(pathlib.Path):
             h = hashlib.new(algorithm)
 
         except TypeError as e:
-            h = hashlib.md5()
+            h = self._digest_default()
 
         for chunk in self.iter_bytes(size):
             h.update(chunk)
@@ -59,12 +65,15 @@ class PathUtil(pathlib.Path):
 
         return h.hexdigest(**kwargs)
 
-    def digest(self, digest: str, *, size: int = None) -> 'hashlib._Hash':
+    def digest(self, digest = None, *, size: int = None) -> 'hashlib._Hash':
 
         if size is None:
             kwargs = dict()
         else:
             kwargs = {'_bufsize': size}
+
+        if digest is None:
+            digest = self._digest_default
 
         with self.open(mode='rb') as f:
             h = hashlib.file_digest(f, digest, **kwargs)
@@ -84,7 +93,7 @@ class PathUtil(pathlib.Path):
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
-    def copy(self, dst: str, mkdir: bool = None, **kwargs) -> tuple['PathUtil', int]:
+    def copy(self, dst: str, *, mkdir: bool = None, **kwargs) -> tuple['PathUtil', int]:
         ''' copies self into a new destination, check distutils.file_util::copy_file for kwargs '''
 
         if mkdir is True:

@@ -40,6 +40,7 @@ def test_hexdigest(tmp_file):
     sha1 = hashlib.new('sha1', my_bytes).hexdigest()
 
     assert p.hexdigest() == md5
+    assert p.hexdigest(p.default_digest) == md5
     assert p.hexdigest(algorithm='md5', size=4) == md5
     assert p.hexdigest(algorithm='sha1') == sha1
 
