@@ -3,6 +3,7 @@ import hashlib
 import os
 import shutil
 import distutils.file_util as dfutil
+from typing import Tuple, Union, Callable
 
 
 class Path(pathlib.Path):
@@ -65,7 +66,7 @@ class Path(pathlib.Path):
 
         return h.hexdigest(**kwargs)
 
-    def digest(self, digest = None, *, size: int = None) -> 'hashlib._Hash':
+    def digest(self, digest: Union[str, Callable] = None, *, size: int = None) -> 'hashlib._Hash':
 
         if size is None:
             kwargs = dict()
@@ -93,7 +94,7 @@ class Path(pathlib.Path):
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
-    def copy(self, dst: str, *, mkdir: bool = None, **kwargs) -> tuple['Path', int]:
+    def copy(self, dst: str, *, mkdir: bool = None, **kwargs) -> Tuple['Path', int]:
         ''' copies self into a new destination, check distutils.file_util::copy_file for kwargs '''
 
         if mkdir is True:
@@ -105,7 +106,7 @@ class Path(pathlib.Path):
 
         return (self.__class__(destination), result)
 
-    def move(self, dst: str, **kwargs) -> tuple['Path', int]:
+    def move(self, dst: str, **kwargs) -> Tuple['Path', int]:
         ''' moves self into a new destination, check shutil::move for kwargs '''
 
         destination = shutil.move(self, dst, **kwargs)
