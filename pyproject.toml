@@ -21,6 +21,7 @@ classifiers = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-pythonpath = "src/pathutil"
+pythonpath = "src"
 testpaths = "test"
+addopts = "--random-order -v"
 # addopts = "--cov=src --cov-report=html:test/report"

@@ -4,7 +4,7 @@ import inspect
 import pathlib
 import subprocess
 
-from pathutil import PathUtil
+from pathlibutil import Path
 
 CONTENT = 'foo\nbar!\n'
 
@@ -26,14 +26,14 @@ def dst_path(tmp_path: pathlib.Path) -> str:
 
 
 def test_eol_count(tmp_file):
-    p = PathUtil(tmp_file)
+    p = Path(tmp_file)
     assert p.eol_count() == 2
     assert p.eol_count(eol='\n') == 2
     assert p.eol_count(eol='\r') == 0
 
 
 def test_hexdigest(tmp_file):
-    p = PathUtil(tmp_file)
+    p = Path(tmp_file)
 
     my_bytes = pathlib.Path(tmp_file).read_bytes()
     md5 = hashlib.new('md5', my_bytes).hexdigest()
@@ -52,7 +52,7 @@ def test_hexdigest(tmp_file):
 
 
 def test_shake(tmp_file):
-    p = PathUtil(tmp_file)
+    p = Path(tmp_file)
 
     assert len(p.hexdigest('shake_128')) == 128*2
 
@@ -68,7 +68,7 @@ def test_shake(tmp_file):
 
 
 def test_digest(tmp_file):
-    p = PathUtil(tmp_file)
+    p = Path(tmp_file)
 
     my_bytes = pathlib.Path(tmp_file).read_bytes()
     md5 = hashlib.new('md5', my_bytes)
@@ -77,7 +77,7 @@ def test_digest(tmp_file):
 
 
 def test_available_algorithm():
-    p = PathUtil()
+    p = Path()
 
     assert isinstance(p.algorithms_available, set)
 
@@ -87,10 +87,10 @@ def test_available_algorithm():
 
 def test_iter_lines(tmp_file):
     with pytest.raises(FileNotFoundError):
-        for line in PathUtil('file_not_available.txt').iter_lines():
+        for line in Path('file_not_available.txt').iter_lines():
             pass
 
-    my_generator = PathUtil(tmp_file).iter_lines()
+    my_generator = Path(tmp_file).iter_lines()
 
     assert inspect.isgenerator(my_generator)
     assert list(my_generator) == str(CONTENT).splitlines()
@@ -98,10 +98,10 @@ def test_iter_lines(tmp_file):
 
 def test_iter_bytes(tmp_file):
     with pytest.raises(FileNotFoundError):
-        for chunk in PathUtil('file_not_available.txt').iter_bytes():
+        for chunk in Path('file_not_available.txt').iter_bytes():
             pass
 
-    my_generator = PathUtil(tmp_file).iter_bytes()
+    my_generator = Path(tmp_file).iter_bytes()
 
     assert inspect.isgenerator(my_generator)
     assert list(my_generator)[0] == str(CONTENT).encode()
@@ -109,13 +109,13 @@ def test_iter_bytes(tmp_file):
 
 def test_main():
     ''' run script in virtual environment '''
-    p = subprocess.run(r'pipenv run src\pathutil\pathutil.py', shell=True)
+    p = subprocess.run(r'pipenv run src\pathlibutil\pathutil.py', shell=True)
 
     assert p.returncode == 0
 
 
 def test_copy(tmp_file, dst_path):
-    src = PathUtil(tmp_file)
+    src = Path(tmp_file)
 
     result = src.copy(dst_path, mkdir=True)
 
@@ -129,7 +129,7 @@ def test_copy(tmp_file, dst_path):
 
 
 def test_move(tmp_file, dst_path):
-    src = PathUtil(tmp_file)
+    src = Path(tmp_file)
 
     result = src.move(dst_path)
 

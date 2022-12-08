@@ -5,7 +5,7 @@ import shutil
 import distutils.file_util as dfutil
 
 
-class PathUtil(pathlib.Path):
+class Path(pathlib.Path):
     _flavour = pathlib._windows_flavour if os.name == 'nt' else pathlib._posix_flavour
 
     _digest_length = {
@@ -93,19 +93,19 @@ class PathUtil(pathlib.Path):
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
-    def copy(self, dst: str, *, mkdir: bool = None, **kwargs) -> tuple['PathUtil', int]:
+    def copy(self, dst: str, *, mkdir: bool = None, **kwargs) -> tuple['Path', int]:
         ''' copies self into a new destination, check distutils.file_util::copy_file for kwargs '''
 
         if mkdir is True:
-            PathUtil(dst).mkdir(parents=True, exist_ok=True)
+            Path(dst).mkdir(parents=True, exist_ok=True)
         elif mkdir is False:
-            PathUtil(dst).mkdir(parents=False, exist_ok=False)
+            Path(dst).mkdir(parents=False, exist_ok=False)
 
         destination, result = dfutil.copy_file(str(self), dst, **kwargs)
 
         return (self.__class__(destination), result)
 
-    def move(self, dst: str, **kwargs) -> tuple['PathUtil', int]:
+    def move(self, dst: str, **kwargs) -> tuple['Path', int]:
         ''' moves self into a new destination, check shutil::move for kwargs '''
 
         destination = shutil.move(self, dst, **kwargs)

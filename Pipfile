@@ -9,6 +9,7 @@ name = "pypi"
 pytest = "*"
 autopep8 = "*"
 pytest-cov = "*"
+pytest-random-order = "*"
 
 [requires]
 python_version = "3.11"
