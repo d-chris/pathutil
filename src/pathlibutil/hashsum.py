@@ -1,0 +1,75 @@
+from . import Path
+from typing import Iterable, Tuple, Generator
+import os
+import re
+
+
+def hashsum(
+    hashfile: str,
+    files: Iterable,
+    *,
+    header: str = None,
+    algorithm: str = 'md5',
+    size: int = None
+) -> Path:
+
+    hashfile = Path(hashfile).with_suffix(f".{algorithm}")
+
+    with hashfile.open(mode='wt', encoding='utf-8') as f:
+        if header != None:
+            f.writelines([f"# {line}\n" for line in header.split() if line])
+
+            if f.seek(0, os.SEEK_END) > 0:
+                f.write('\n')
+
+        dest = hashfile.resolve().parent
+
+        kwargs = {
+            'algorithm': algorithm,
+            'size': size
+        }
+
+        for file in map(lambda x: Path(x).resolve(), files):
+
+            if file.is_relative_to(dest):
+                filename = file.relative_to(dest)
+            else:
+                filename = file
+
+            f.write(f"{file.hexdigest(**kwargs)} *{filename}\n")
+
+    return hashfile
+
+
+def hashcheck(
+    hashfile: str,
+    algorithm: str = None,
+    *,
+    size: int = None
+) -> Generator[Tuple[str, Path], None, None]:
+
+    hashfile = Path(hashfile)
+
+    if algorithm is None:
+        algorithm = hashfile.suffix.lstrip('.')
+
+    root = hashfile.resolve().parent
+
+    regex = re.compile(
+        r'^(?P<hash>[a-f0-9]{8,}) \*(?P<filename>.*?)$',
+        re.IGNORECASE
+    )
+
+    for match in map(lambda line: regex.match(line.strip()), hashfile.iter_lines(encoding='utf-8')):
+        if match is None:
+            continue
+
+        try:
+            hash, filename = match.group('hash'), Path(match.group('filename'))
+        except IndexError:
+            continue
+
+        if not filename.is_absolute():
+            filename = root.joinpath(filename)
+
+        yield (hash, filename)
