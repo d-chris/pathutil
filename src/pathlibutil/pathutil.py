@@ -94,7 +94,7 @@ class Path(pathlib.Path):
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
-    def copy(self, dst: str, *, mkdir: bool = None, **kwargs) -> Tuple['Path', int]:
+    def copy(self, dst: Union[str, 'Path'], *, mkdir: bool = None, **kwargs) -> Tuple['Path', int]:
         ''' copies self into a new destination, check distutils.file_util::copy_file for kwargs '''
 
         if mkdir is True:
@@ -102,11 +102,11 @@ class Path(pathlib.Path):
         elif mkdir is False:
             Path(dst).mkdir(parents=False, exist_ok=False)
 
-        destination, result = dfutil.copy_file(str(self), dst, **kwargs)
+        destination, result = dfutil.copy_file(self, dst, **kwargs)
 
         return (self.__class__(destination), result)
 
-    def move(self, dst: str, **kwargs) -> Tuple['Path', int]:
+    def move(self, dst: Union[str, 'Path'], **kwargs) -> Tuple['Path', int]:
         ''' moves self into a new destination, check shutil::move for kwargs '''
 
         destination = shutil.move(self, dst, **kwargs)
@@ -114,6 +114,17 @@ class Path(pathlib.Path):
         dest = self.__class__(destination)
 
         return (dest, dest.exists())
+
+    def rmdir(self, *, file_ok: bool = False, **kwargs) -> bool:
+        ''' deletes an directory with all files, check shutil::rmtree for kwargs '''
+
+        try:
+            shutil.rmtree(self, **kwargs)
+        except NotADirectoryError as e:
+            if not file_ok is True:
+                raise NotADirectoryError(f"'{self}' is not a directory")
+
+        return self.exists() == False
 
 
 if __name__ == '__main__':

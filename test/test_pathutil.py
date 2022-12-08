@@ -139,3 +139,30 @@ def test_move(tmp_file, dst_path):
 
     assert moved == True
     assert pathlib.Path(src).is_file() == False
+
+
+def test_rmdir_isfile(tmp_file):
+    src = Path(tmp_file)
+
+    with pytest.raises(NotADirectoryError):
+        src.rmdir()
+
+    with pytest.raises(NotADirectoryError):
+        src.rmdir(file_ok=None)
+
+    with pytest.raises(NotADirectoryError):
+        src.rmdir(file_ok=False)
+
+    assert src.rmdir(file_ok=True) == False
+
+
+def test_rmdir_isdir(dst_path):
+    dst = Path(dst_path)
+    dst.mkdir()
+    file = dst.joinpath('tmp.txt')
+    file.touch()
+
+    assert dst.is_dir() == True
+    assert file.is_file() == True
+    assert dst.rmdir() == True
+    assert file.exists() == False
