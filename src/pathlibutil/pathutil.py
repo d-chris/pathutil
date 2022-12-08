@@ -116,12 +116,12 @@ class Path(pathlib.Path):
         return (dest, dest.exists())
 
     def rmdir(self, *, file_ok: bool = False, **kwargs) -> bool:
-        ''' deletes an directory with all files, check shutil::rmtree for kwargs '''
+        ''' deletes a directory with all files, check shutil::rmtree for kwargs '''
 
         try:
             shutil.rmtree(self, **kwargs)
         except NotADirectoryError as e:
-            if not file_ok is True:
+            if file_ok != True:
                 raise NotADirectoryError(f"'{self}' is not a directory")
 
         return self.exists() == False

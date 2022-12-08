@@ -166,3 +166,4 @@ def test_rmdir_isdir(dst_path):
     assert file.is_file() == True
     assert dst.rmdir() == True
     assert file.exists() == False
+    assert dst.exists() == False
