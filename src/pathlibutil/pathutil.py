@@ -94,13 +94,11 @@ class Path(pathlib.Path):
 
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
-    def copy(self, dst: Union[str, 'Path'], *, mkdir: bool = None, **kwargs) -> Tuple['Path', int]:
+    def copy(self, dst: Union[str, 'Path'], *, parents: bool = True, **kwargs) -> Tuple['Path', int]:
         ''' copies self into a new destination, check distutils.file_util::copy_file for kwargs '''
 
-        if mkdir is True:
+        if parents is True:
             Path(dst).mkdir(parents=True, exist_ok=True)
-        elif mkdir is False:
-            Path(dst).mkdir(parents=False, exist_ok=False)
 
         destination, result = dfutil.copy_file(self, dst, **kwargs)
 
@@ -115,16 +113,31 @@ class Path(pathlib.Path):
 
         return (dest, dest.exists())
 
-    def rmdir(self, *, file_ok: bool = False, **kwargs) -> bool:
+    def rmdir(self, *, recursive=False, **kwargs):
         ''' deletes a directory with all files, check shutil::rmtree for kwargs '''
 
-        try:
+        if not recursive:
+            super().rmdir()
+        else:
             shutil.rmtree(self, **kwargs)
-        except NotADirectoryError as e:
-            if file_ok != True:
-                raise NotADirectoryError(f"'{self}' is not a directory")
 
-        return self.exists() == False
+    def unlink(self, missing_ok: bool = False, *, prune: Union[bool, str] = False):
+        ''' deletes a file and prune an empty directory '''
+        super().unlink(missing_ok)
+
+        if prune:
+            try:
+                self.parent.rmdir(recursive=False)
+            except OSError as e:
+                if str(prune).casefold() != 'try':
+                    raise
+
+    def touch(self, mode=0o666, exist_ok=True, *, parents: bool = False):
+        ''' creates a file and and parent directories '''
+        if parents is True:
+            self.parent.mkdir(parents=True, exist_ok=True)
+
+        super().touch(mode=mode, exist_ok=exist_ok)
 
 
 if __name__ == '__main__':

@@ -117,7 +117,7 @@ def test_main():
 def test_copy(tmp_file, dst_path):
     src = Path(tmp_file)
 
-    result = src.copy(dst_path, mkdir=True)
+    result = src.copy(dst_path, parents=True)
 
     assert isinstance(result, tuple)
 
@@ -141,6 +141,48 @@ def test_move(tmp_file, dst_path):
     assert pathlib.Path(src).is_file() == False
 
 
+def test_unlink_prune(tmp_file):
+    src = Path(tmp_file)
+
+    src.unlink(prune=True)
+    assert src.is_file() == False
+    assert src.parent.exists() == False
+
+
+def test_unlink(tmp_file):
+    src = Path(tmp_file)
+
+    src.unlink()
+    assert src.is_file() == False
+    assert src.parent.exists() == True
+
+
+def test_unlink_missing(tmp_path):
+    src = Path(tmp_path) / 'subdir' / 'file_not_found.txt'
+
+    with pytest.raises(FileNotFoundError):
+        src.unlink()
+
+    src.parent.mkdir()
+
+    src.unlink(missing_ok=True)
+    assert src.parent.is_dir() == True
+
+    src2 = Path(tmp_path) / 'subdir' / 'not_empty.txt'
+    src2.touch()
+
+    with pytest.raises(OSError):
+        src.unlink(missing_ok=True, prune=True)
+    assert src.parent.is_dir() == True
+
+    src.unlink(missing_ok=True, prune='try')
+    assert src.parent.is_dir() == True
+
+    src2.unlink()
+    src.unlink(missing_ok=True, prune=True)
+    assert src.parent.is_dir() == False
+
+
 def test_rmdir_isfile(tmp_file):
     src = Path(tmp_file)
 
@@ -148,12 +190,9 @@ def test_rmdir_isfile(tmp_file):
         src.rmdir()
 
     with pytest.raises(NotADirectoryError):
-        src.rmdir(file_ok=None)
+        src.rmdir(recursive=True)
 
-    with pytest.raises(NotADirectoryError):
-        src.rmdir(file_ok=False)
-
-    assert src.rmdir(file_ok=True) == False
+    assert src.exists() == True
 
 
 def test_rmdir_isdir(dst_path):
@@ -164,6 +203,24 @@ def test_rmdir_isdir(dst_path):
 
     assert dst.is_dir() == True
     assert file.is_file() == True
-    assert dst.rmdir() == True
+    dst.rmdir(recursive=True)
     assert file.exists() == False
     assert dst.exists() == False
+
+
+def test_touch(tmp_path):
+    src = Path(tmp_path) / 'file_not_found.txt'
+
+    src.touch()
+    assert src.is_file() == True
+
+    src2 = Path(tmp_path) / 'subdir' / 'file_not_found.txt'
+
+    with pytest.raises(FileNotFoundError):
+        src2.touch()
+
+    assert src2.exists() == False
+
+    src2.touch(parents=True)
+    assert src2.parent.is_dir() == True
+    assert src2.is_file() == True
