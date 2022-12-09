@@ -102,16 +102,18 @@ class Path(pathlib.Path):
 
         destination, result = dfutil.copy_file(self, dst, **kwargs)
 
-        return (self.__class__(destination), result)
+        return (Path(destination), result)
 
-    def move(self, dst: Union[str, 'Path'], **kwargs) -> Tuple['Path', int]:
-        ''' moves self into a new destination, check shutil::move for kwargs '''
+    def move(self, dst: Union[str, 'Path'], *, parents: bool = True, prune: bool = True, **kwargs) -> Tuple['Path', int]:
+        ''' moves self into a new destination '''
 
-        destination = shutil.move(self, dst, **kwargs)
+        destination, result = self.copy(dst, parents=parents, **kwargs)
 
-        dest = self.__class__(destination)
+        if result:
+            prune = False if prune is False else 'try'
+            self.unlink(missing_ok=True, prune=prune)
 
-        return (dest, dest.exists())
+        return (Path(destination), result)
 
     def rmdir(self, *, recursive=False, **kwargs):
         ''' deletes a directory with all files, check shutil::rmtree for kwargs '''
