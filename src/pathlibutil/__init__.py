@@ -1,4 +1,4 @@
 from .pathutil import Path
-from .hashsum import hashsum, hashcheck
+from .hashsum import hashsum, hashcheck, hashparse
 
-__all__ = ["Path", "hashsum", "hashcheck"]
+__all__ = ['Path', 'hashsum', 'hashcheck', 'hashparse']

@@ -9,15 +9,23 @@ def hashsum(
     files: Iterable,
     *,
     header: str = None,
-    algorithm: str = 'md5',
+    algorithm: str = None,
     size: int = None
 ) -> Path:
+    hashfile = Path(hashfile)
 
-    hashfile = Path(hashfile).with_suffix(f".{algorithm}")
+    if algorithm is None:
+        algorithm = hashfile.suffix.lstrip('.')
+        if algorithm not in hashfile.algorithms_available:
+            raise ValueError('unknown suffix or specify algorithm')
+    else:
+        hashfile = hashfile.with_suffix(f".{algorithm}")
 
     with hashfile.open(mode='wt', encoding='utf-8') as f:
         if header != None:
-            f.writelines([f"# {line}\n" for line in header.split() if line])
+            f.writelines(
+                [f"# {line}\n" for line in header.split('\n') if line]
+            )
 
             if f.seek(0, os.SEEK_END) > 0:
                 f.write('\n')
@@ -41,39 +49,11 @@ def hashsum(
     return hashfile
 
 
-def hashcheck(
-    hashfile: str,
-    algorithm: str = None,
-    *,
-    size: int = None
-) -> Dict[Union[bool, None], List[Path]]:
-
-    kwargs = {
-        'algorithm': algorithm,
-        'size': size
-    }
-
-    result = {True: [], False: [], None: []}
-
-    for hash, file in hashparse(hashfile):
-        try:
-            key = hash == file.hexdigest(**kwargs)
-        except (FileNotFoundError, PermissionError) as e:
-            result[None].append(file)
-        else:
-            result[key].append(file)
-
-    return result
-
-
 def hashparse(
     hashfile: str,
 ) -> Generator[Tuple[str, Path], None, None]:
 
     hashfile = Path(hashfile)
-
-    if algorithm is None:
-        algorithm = hashfile.suffix.lstrip('.')
 
     root = hashfile.resolve().parent
 
@@ -95,3 +75,33 @@ def hashparse(
             filename = root.joinpath(filename)
 
         yield (hash, filename)
+
+
+def hashcheck(
+    hashfile: str,
+    algorithm: str = None,
+    *,
+    size: int = None
+) -> Dict[Union[bool, None], List[Path]]:
+
+    if algorithm is None:
+        algorithm = hashfile.suffix.lstrip('.')
+        if algorithm not in hashfile.algorithms_available:
+            raise ValueError('unknown suffix or specify algorithm')
+
+    kwargs = {
+        'algorithm': algorithm,
+        'size': size
+    }
+
+    result = {True: [], False: [], None: []}
+
+    for hash, file in hashparse(hashfile):
+        try:
+            key = hash == file.hexdigest(**kwargs)
+        except (FileNotFoundError, PermissionError) as e:
+            result[None].append(file)
+        else:
+            result[key].append(file)
+
+    return result
