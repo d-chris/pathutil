@@ -1,5 +1,5 @@
 from . import Path
-from typing import Iterable, Tuple, Generator
+from typing import Iterable, Tuple, Generator, Dict, List, Union
 import os
 import re
 
@@ -46,6 +46,28 @@ def hashcheck(
     algorithm: str = None,
     *,
     size: int = None
+) -> Dict[Union[bool, None], List[Path]]:
+
+    kwargs = {
+        'algorithm': algorithm,
+        'size': size
+    }
+
+    result = {True: [], False: [], None: []}
+
+    for hash, file in hashparse(hashfile):
+        try:
+            key = hash == file.hexdigest(**kwargs)
+        except (FileNotFoundError, PermissionError) as e:
+            result[None].append(file)
+        else:
+            result[key].append(file)
+
+    return result
+
+
+def hashparse(
+    hashfile: str,
 ) -> Generator[Tuple[str, Path], None, None]:
 
     hashfile = Path(hashfile)

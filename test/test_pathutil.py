@@ -50,6 +50,15 @@ def test_hexdigest(tmp_file):
     with pytest.raises(TypeError):
         p.hexdigest(size='fubar')
 
+    # test on a directory
+    with pytest.raises(PermissionError):
+        p.parent.hexdigest()
+
+    # test none existing file
+    p.unlink()
+    with pytest.raises(FileNotFoundError):
+        p.hexdigest()
+
 
 def test_shake(tmp_file):
     p = Path(tmp_file)
