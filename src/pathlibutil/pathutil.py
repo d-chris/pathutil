@@ -16,6 +16,11 @@ class Path(pathlib.Path):
 
     _digest_default = hashlib.md5
 
+    def __init__(self, *args):
+        super().__init__()
+
+        _ = self.modified
+
     @property
     def default_digest(self) -> 'hashlib._Hash':
         return self._digest_default
@@ -110,7 +115,7 @@ class Path(pathlib.Path):
         destination, result = self.copy(dst, parents=parents, **kwargs)
 
         if result:
-            prune = False if prune is False else 'try'
+            prune = False if not prune else 'try'
             self.unlink(missing_ok=True, prune=prune)
 
         return (Path(destination), result)
@@ -140,6 +145,22 @@ class Path(pathlib.Path):
             self.parent.mkdir(parents=True, exist_ok=True)
 
         super().touch(mode=mode, exist_ok=exist_ok)
+
+    @property
+    def modified(self) -> bool:
+        ''' returns true when file was modified after initialization from class instance '''
+        try:
+            mtime = self.stat().st_mtime_ns
+
+            if self._mtime < mtime:
+                self._mtime = mtime
+                return True
+        except AttributeError as e:
+            self._mtime = mtime
+        except FileNotFoundError as e:
+            pass
+
+        return False
 
 
 if __name__ == '__main__':
