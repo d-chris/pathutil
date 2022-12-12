@@ -3,10 +3,12 @@ import hashlib
 import inspect
 import pathlib
 import subprocess
+import time
 
 from pathlibutil import Path
 
 CONTENT = 'foo\nbar!\n'
+SEC = 0.02
 
 
 @pytest.fixture()
@@ -144,7 +146,7 @@ def test_move(tmp_file, dst_path):
 
     assert isinstance(result, tuple)
 
-    dst, moved = result
+    _, moved = result
 
     assert moved == True
     assert pathlib.Path(src).is_file() == False
@@ -233,3 +235,41 @@ def test_touch(tmp_path):
     src2.touch(parents=True)
     assert src2.parent.is_dir() == True
     assert src2.is_file() == True
+
+
+def test_modified(tmp_file):
+    src = Path(tmp_file)
+
+    assert src.modified == False
+
+    with src.open(mode='at') as f:
+        f.write('hallo welt')
+        time.sleep(SEC)
+
+    assert src.modified == True
+    assert src.modified == False
+
+
+def test_mtime(tmp_file, tmp_path):
+    src = Path(tmp_file)
+
+    start = src.mtime
+
+    assert isinstance(start, int)
+
+    with src.open(mode='at') as f:
+        f.write('hallo welt')
+        time.sleep(SEC)
+
+    end = src.mtime
+    assert (end - start) >= (SEC * 1e9)
+
+    assert (src.mtime - end) == 0
+
+    src2 = Path(tmp_path) / 'subdir_not_exists'
+
+    with pytest.raises(FileNotFoundError):
+        _ = src2.mtime
+
+    src2.mkdir()
+    assert src2.mtime > 0

@@ -26,6 +26,7 @@ class Path(pathlib.Path):
         return self._digest_default
 
     def iter_lines(self, encoding: str = None) -> str:
+        ''' read the content of a file line by line without the line-ending char '''
         with super().open(mode='rt', encoding=encoding) as f:
             while True:
                 line = f.readline()
@@ -36,6 +37,7 @@ class Path(pathlib.Path):
                     break
 
     def iter_bytes(self, size: int = None) -> bytes:
+        ''' return a chunk of bytes '''
         with super().open(mode='rb') as f:
             while True:
                 chunk = f.read(size)
@@ -46,6 +48,7 @@ class Path(pathlib.Path):
                     break
 
     def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
+        ''' calculate a hashsum using an algorithm '''
         try:
             h = hashlib.new(algorithm)
 
@@ -72,7 +75,7 @@ class Path(pathlib.Path):
         return h.hexdigest(**kwargs)
 
     def digest(self, digest: Union[str, Callable] = None, *, size: int = None) -> 'hashlib._Hash':
-
+        ''' digest of the binary file-content '''
         if size is None:
             kwargs = dict()
         else:
@@ -88,9 +91,11 @@ class Path(pathlib.Path):
 
     @property
     def algorithms_available(self) -> set[str]:
+        ''' names of available hash algorithms '''
         return hashlib.algorithms_available
 
     def eol_count(self, eol: str = None, size: int = None) -> int:
+        ''' return the number of end-of-line characters'''
         try:
             substr = eol.encode()
 
@@ -147,16 +152,21 @@ class Path(pathlib.Path):
         super().touch(mode=mode, exist_ok=exist_ok)
 
     @property
+    def mtime(self) -> int:
+        ''' time of the last modification in nanoseconds '''
+        return self.stat().st_mtime_ns
+
+    @property
     def modified(self) -> bool:
         ''' returns true when file was modified after initialization from class instance '''
         try:
-            mtime = self.stat().st_mtime_ns
+            time = self.mtime
 
-            if self._mtime < mtime:
-                self._mtime = mtime
+            if time > self._mtime:
+                self._mtime = time
                 return True
         except AttributeError as e:
-            self._mtime = mtime
+            self._mtime = time
         except FileNotFoundError as e:
             pass
 
