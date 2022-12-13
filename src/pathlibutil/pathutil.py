@@ -160,13 +160,13 @@ class Path(pathlib.Path):
     def modified(self) -> bool:
         ''' returns true when file was modified after initialization from class instance '''
         try:
-            time = self.mtime
+            lock = (self.mtime, self)
 
-            if time > self._mtime:
-                self._mtime = time
+            if self._lock != lock:
+                self._lock = lock
                 return True
         except AttributeError as e:
-            self._mtime = time
+            self._lock = lock
         except FileNotFoundError as e:
             pass
 
