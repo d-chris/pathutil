@@ -5,7 +5,7 @@ import pathlib
 import subprocess
 import time
 
-from pathlibutil import Path
+from pathlibutil import Path, ShortcutError
 
 CONTENT = 'foo\nbar!\n'
 SEC = 0.02
@@ -274,3 +274,42 @@ def test_mtime(tmp_file, tmp_path):
 
     src2.mkdir()
     assert src2.mtime > 0
+
+
+def test_equal(tmp_file):
+    new = Path(tmp_file)
+    old = pathlib.Path(tmp_file)
+
+    assert new == old
+    assert old != new
+    assert new == new
+
+
+def test_resolve(tmp_file, tmp_path):
+    lnk = Path(tmp_path) / 'shortcut.lnk'
+
+    cmd = [
+        r'C:\Program Files\Git\mingw64\bin\create-shortcut.exe',
+        tmp_file,
+        str(lnk)
+    ]
+
+    result = subprocess.run(cmd, capture_output=True)
+    assert result.returncode == 0, 'creating shortcut failed'
+
+    assert lnk.resolve(deep=True) == Path(tmp_file), 'link was not resolved'
+
+    assert lnk.resolve() == pathlib.Path(str(lnk)).resolve()
+
+    pathlib.Path(tmp_file).unlink()
+    with pytest.raises(FileNotFoundError):
+        lnk.resolve(deep=True, strict=True)
+
+    assert str(lnk.resolve(deep=True)) == tmp_file
+
+    link = Path(tmp_file).with_suffix('.lnk')
+    link.touch()
+    assert link.resolve(deep=True) == pathlib.Path(str(link)).resolve()
+
+    with pytest.raises(ShortcutError):
+        link.resolve(deep=True, strict=True)

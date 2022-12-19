@@ -6,16 +6,44 @@ import distutils.file_util as dfutil
 from typing import Tuple, Union, Callable
 
 
+class ShortcutError(Exception):
+    def __init__(self, file, flavour=''):
+        self.file = str(file)
+        self.flavour = str(flavour)
+
+        self.msg = f'{self.file} is not a valid {self.flavour} shortcut'
+
+        super().__init__(self.msg)
+
+
 class _WindowsFlavour(pathlib._WindowsFlavour):
     _shortcuts = ('.lnk',)
 
-    def is_shortcut(self, s):
+    def is_shortcut(self, s: str) -> bool:
         return self.casefold(s) in self._shortcuts
+
+    def resolve_shortcut(self, s: str) -> str:
+        try:
+            import win32com.client
+        except ImportError as e:
+            e.msg += "\npip install pywin32"
+            raise e
+
+        shell = win32com.client.Dispatch("WScript.Shell")
+        link = shell.CreateShortCut(str(s)).Targetpath
+
+        if not link:
+            raise ShortcutError(s, flavour=self.__class__.__name__)
+
+        return link
 
 
 class _PosixFlavour(pathlib._PosixFlavour):
-    def is_shortcut(self, s):
-        False
+    def is_shortcut(self, s: str) -> bool:
+        return False
+
+    def resolve_shortcut(self, s: str) -> str:
+        raise NotImplementedError
 
 
 _windows_flavour = _WindowsFlavour()
@@ -187,6 +215,26 @@ class Path(pathlib.Path):
             pass
 
         return False
+
+    def resolve(self, strict=False, *, deep=False):
+        if not deep or not self._flavour.is_shortcut(self.suffix):
+            return super().resolve(strict=strict)
+        else:
+            try:
+                result = self._flavour.resolve_shortcut(self)
+            except ShortcutError as e:
+                if strict:
+                    raise
+
+                return self.resolve()
+            else:
+                return Path(result).resolve(strict=strict, deep=True)
+
+    def __eq__(self, other: object) -> bool:
+        if super().__eq__(other):
+            return True
+
+        return self._cparts == other._cparts and issubclass(type(self._flavour), type(other._flavour))
 
 
 if __name__ == '__main__':
