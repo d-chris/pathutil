@@ -3,6 +3,7 @@ import LnkParse3
 import struct
 import warnings
 
+# https://stackoverflow.com/questions/65572953/how-to-get-the-real-path-of-shortcut
 
 def PathLnk(filename: str) -> Path:
     file = Path(filename)

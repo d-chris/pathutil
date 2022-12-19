@@ -6,8 +6,24 @@ import distutils.file_util as dfutil
 from typing import Tuple, Union, Callable
 
 
+class _WindowsFlavour(pathlib._WindowsFlavour):
+    _shortcuts = ('.lnk',)
+
+    def is_shortcut(self, s):
+        return self.casefold(s) in self._shortcuts
+
+
+class _PosixFlavour(pathlib._PosixFlavour):
+    def is_shortcut(self, s):
+        False
+
+
+_windows_flavour = _WindowsFlavour()
+_posix_flavour = _PosixFlavour()
+
+
 class Path(pathlib.Path):
-    _flavour = pathlib._windows_flavour if os.name == 'nt' else pathlib._posix_flavour
+    _flavour = _windows_flavour if os.name == 'nt' else pathlib._posix_flavour
 
     _digest_length = {
         'shake_128': 128,
@@ -167,7 +183,7 @@ class Path(pathlib.Path):
                 return True
         except AttributeError as e:
             self._lock = lock
-        except FileNotFoundError as e:
+        except (FileNotFoundError, PermissionError) as e:
             pass
 
         return False

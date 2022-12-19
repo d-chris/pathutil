@@ -130,13 +130,14 @@ def test_copy(tmp_file, dst_path):
 
     result = src.copy(dst_path, parents=True)
 
-    assert isinstance(result, tuple)
+    assert isinstance(result, tuple), "wrong return value"
 
     dst, copied = result
 
-    assert copied == True
-    assert pathlib.Path(src).is_file() == True
-    assert dst == pathlib.Path(dst_path).joinpath(pathlib.Path(tmp_file).name)
+    assert copied == True, "was not copied"
+    assert pathlib.Path(src).is_file() == True, "source file is missing"
+    assert dst.samefile(pathlib.Path(
+        dst_path).joinpath(src.name)), "not same file"
 
 
 def test_move(tmp_file, dst_path):
