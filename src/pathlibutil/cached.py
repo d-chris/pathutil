@@ -4,23 +4,23 @@ import functools
 
 def cache(func):
     @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def cached(self, *args, **kwargs):
         try:
             lock = (self.mtime, self)
         except AttributeError:
             lock = self
 
         try:
-            func_cache = self.__cache[lock]
+            func_cache = self.__cache__[lock]
         except (AttributeError, KeyError):
             func_cache = dict()
-            self.__cache = {lock: func_cache}
+            self.__cache__ = {lock: func_cache}
 
         try:
             args_cache = func_cache[func.__name__]
         except KeyError:
             args_cache = dict()
-            self.__cache[lock][func.__name__] = args_cache
+            self.__cache__[lock][func.__name__] = args_cache
 
         key = args + tuple(sorted(kwargs.items()))
         try:
@@ -31,7 +31,7 @@ def cache(func):
 
         return value
 
-    return wrapper
+    return cached
 
 
 class Path(Path):
