@@ -3,6 +3,8 @@ from typing import Iterable, Tuple, Generator, Dict, List, Union
 import os
 import re
 
+import concurrent.futures as cf
+
 
 def hashsum(
     hashfile: str,
@@ -37,14 +39,24 @@ def hashsum(
             'size': size
         }
 
-        for file in map(lambda x: Path(x).resolve(), files):
+        def calc_hashes(file: Path, dest: Path, **kwargs) -> str:
+            file = file.resolve()
 
             if file.is_relative_to(dest):
                 filename = file.relative_to(dest)
             else:
                 filename = file
 
-            f.write(f"{file.hexdigest(**kwargs)} *{filename}\n")
+            return f"{file.hexdigest(**kwargs)} *{filename}"
+
+        with cf.ThreadPoolExecutor() as exec:
+            results = [
+                exec.submit(calc_hashes, file, dest, **kwargs)
+                for file in files
+            ]
+
+            for result in cf.as_completed(results):
+                f.write(f"{result.result()}\n")
 
     return hashfile
 
