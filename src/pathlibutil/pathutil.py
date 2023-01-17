@@ -16,6 +16,8 @@ class Path(pathlib.Path):
 
     _digest_default = hashlib.md5
 
+    _digest_chunk = 2**20
+
     def __init__(self, *args):
         super().__init__()
 
@@ -38,6 +40,9 @@ class Path(pathlib.Path):
 
     def iter_bytes(self, size: int = None) -> bytes:
         ''' return a chunk of bytes '''
+        if not size:
+            size = self._digest_chunk
+
         with super().open(mode='rb') as f:
             while True:
                 chunk = f.read(size)
@@ -76,16 +81,14 @@ class Path(pathlib.Path):
 
     def digest(self, digest: Union[str, Callable] = None, *, size: int = None) -> 'hashlib._Hash':
         ''' digest of the binary file-content '''
-        if size is None:
-            kwargs = dict()
-        else:
-            kwargs = {'_bufsize': size}
+        if not size:
+            size = self._digest_chunk
 
         if digest is None:
             digest = self._digest_default
 
         with self.open(mode='rb') as f:
-            h = hashlib.file_digest(f, digest, **kwargs)
+            h = hashlib.file_digest(f, digest, _bufsize=size)
 
         return h
 
@@ -145,7 +148,7 @@ class Path(pathlib.Path):
                     raise
 
     def touch(self, mode=0o666, exist_ok=True, *, parents: bool = False):
-        ''' creates a file and and parent directories '''
+        ''' creates a file and parent directories '''
         if parents is True:
             self.parent.mkdir(parents=True, exist_ok=True)
 
