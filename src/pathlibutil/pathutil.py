@@ -3,7 +3,7 @@ import hashlib
 import os
 import shutil
 import distutils.file_util as dfutil
-from typing import Tuple, Union, Callable
+from typing import Tuple, Union, Callable, Optional
 
 
 class Path(pathlib.Path):
@@ -17,11 +17,6 @@ class Path(pathlib.Path):
     _digest_default = hashlib.md5
 
     _digest_chunk = 2**20
-
-    def __init__(self, *args):
-        super().__init__()
-
-        _ = self.modified
 
     @property
     def default_digest(self) -> 'hashlib._Hash':
@@ -64,7 +59,7 @@ class Path(pathlib.Path):
             h.update(chunk)
 
         try:
-            bits = self._digest_length[algorithm]
+            bytes = self._digest_length[algorithm]
 
             if length <= 0:
                 raise ValueError(
@@ -75,7 +70,7 @@ class Path(pathlib.Path):
         except KeyError as e:
             kwargs = dict()
         except TypeError as e:
-            kwargs = {'length': bits}
+            kwargs = {'length': bytes}
 
         return h.hexdigest(**kwargs)
 
@@ -159,21 +154,30 @@ class Path(pathlib.Path):
         ''' time of the last modification in nanoseconds '''
         return self.stat().st_mtime_ns
 
-    @property
-    def modified(self) -> bool:
-        ''' returns true when file was modified after initialization from class instance '''
-        try:
-            lock = (self.mtime, self)
+    def verify(self, hash: str, algorithm: Optional[str] = None) -> Union[str, None]:
+        ''' verify if file has the correct hash '''
+        hash = hash.strip().lower()
+        size = int(len(hash) / 2)
 
-            if self._lock != lock:
-                self._lock = lock
-                return True
-        except AttributeError as e:
-            self._lock = lock
-        except FileNotFoundError as e:
-            pass
+        if algorithm:
+            result = self.hexdigest(algorithm, length=size)
+            return algorithm if result == hash else None
 
-        return False
+        for algorithm in self.algorithms_available:
+            hasher = hashlib.new(algorithm)
+            if hasher.digest_size == 0:
+                kwargs = {'length': size}
+            elif size != hasher.digest_size:
+                continue
+            else:
+                kwargs = dict()
+
+            if self.digest(lambda: hasher).hexdigest(**kwargs) == hash:
+                break
+        else:
+            return None
+
+        return algorithm
 
 
 if __name__ == '__main__':

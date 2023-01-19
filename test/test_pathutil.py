@@ -34,6 +34,25 @@ def test_eol_count(tmp_file):
     assert p.eol_count(eol='\r') == 0
 
 
+def test_verify(tmp_file):
+    p = Path(tmp_file)
+
+    my_bytes = pathlib.Path(tmp_file).read_bytes()
+    shake_128 = hashlib.new('shake_128', my_bytes).hexdigest(128)
+    sha256 = hashlib.new('sha256', my_bytes).hexdigest()
+
+    assert p.verify(sha256) == 'sha256'
+    assert p.verify(sha256, algorithm='sha256') != None
+    assert p.verify(sha256[:14]) == None
+    assert p.verify(sha256[:14], algorithm='sha256') == None
+    assert p.verify(sha256, algorithm='sha1') == None
+
+    assert p.verify(shake_128) != None
+    assert p.verify(shake_128, algorithm='shake_128') == 'shake_128'
+    assert p.verify(shake_128[:32]) != None
+    assert p.verify(shake_128[:32], algorithm='shake_128') == 'shake_128'
+
+
 def test_hexdigest(tmp_file):
     p = Path(tmp_file)
 
@@ -235,19 +254,6 @@ def test_touch(tmp_path):
     src2.touch(parents=True)
     assert src2.parent.is_dir() == True
     assert src2.is_file() == True
-
-
-def test_modified(tmp_file):
-    src = Path(tmp_file)
-
-    assert src.modified == False
-
-    with src.open(mode='at') as f:
-        f.write('hallo welt')
-        time.sleep(SEC)
-
-    assert src.modified == True
-    assert src.modified == False
 
 
 def test_mtime(tmp_file, tmp_path):
