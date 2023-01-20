@@ -3,7 +3,7 @@ import hashlib
 import os
 import shutil
 import distutils.file_util as dfutil
-from typing import Tuple, Union, Callable, Optional
+from typing import Tuple, Union, Callable, Optional, Any
 
 
 class Path(pathlib.Path):
@@ -49,6 +49,8 @@ class Path(pathlib.Path):
 
     def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
         ''' calculate a hashsum using an algorithm '''
+        algorithm = self.algorithm(algorithm)
+
         try:
             h = hashlib.new(algorithm)
 
@@ -81,6 +83,8 @@ class Path(pathlib.Path):
 
         if not digest:
             digest = self._digest_default
+        else:
+            digest = self.algorithm(digest)
 
         with self.open(mode='rb') as f:
             h = hashlib.file_digest(f, digest, _bufsize=size)
@@ -91,6 +95,13 @@ class Path(pathlib.Path):
     def algorithms_available(self) -> set[str]:
         ''' names of available hash algorithms '''
         return hashlib.algorithms_available
+
+    def algorithm(self, value: Union[str, Any]) -> Union[str, Any]:
+        ''' converts file suffix into a valid algorithm string '''
+        try:
+            return value.strip().lstrip('.').lower()
+        except AttributeError:
+            return value
 
     def eol_count(self, eol: str = None, size: int = None) -> int:
         ''' return the number of end-of-line characters'''
