@@ -154,25 +154,25 @@ class Path(pathlib.Path):
         ''' time of the last modification in nanoseconds '''
         return self.stat().st_mtime_ns
 
-    def verify(self, hexdigest: str, algorithm: Optional[str] = None) -> Union[str, None]:
+    def verify(self, hexdigest: str, algorithm: Optional[str] = None, size: Optional[int] = None) -> Union[str, None]:
         ''' verify if file has the correct hash '''
         hexdigest = hexdigest.strip().lower()
-        size = int(len(hexdigest) / 2)
+        digest_size = int(len(hexdigest) / 2)
 
         if algorithm:
-            result = self.hexdigest(algorithm, length=size)
+            result = self.hexdigest(algorithm, length=digest_size, size=size)
             return algorithm if result == hexdigest else None
 
         for algorithm in self.algorithms_available:
             hasher = hashlib.new(algorithm)
             if hasher.digest_size == 0:
-                kwargs = {'length': size}
-            elif size != hasher.digest_size:
+                kwargs = {'length': digest_size}
+            elif digest_size != hasher.digest_size:
                 continue
             else:
                 kwargs = dict()
 
-            if self.digest(lambda: hasher).hexdigest(**kwargs) == hexdigest:
+            if self.digest(lambda: hasher, size=size).hexdigest(**kwargs) == hexdigest:
                 break
         else:
             return None

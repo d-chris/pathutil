@@ -96,11 +96,6 @@ def hashcheck(
     size: int = None
 ) -> Dict[Union[bool, None], List[Path]]:
 
-    if algorithm is None:
-        algorithm = hashfile.suffix.lstrip('.')
-        if algorithm not in hashfile.algorithms_available:
-            raise ValueError('unknown suffix or specify algorithm')
-
     kwargs = {
         'algorithm': algorithm,
         'size': size
@@ -110,7 +105,7 @@ def hashcheck(
 
     for hash, file in hashparse(hashfile):
         try:
-            key = hash == file.hexdigest(**kwargs)
+            key = bool(file.verify(hash, **kwargs))
         except (FileNotFoundError, PermissionError) as e:
             result[None].append(file)
         else:

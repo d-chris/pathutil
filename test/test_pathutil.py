@@ -46,6 +46,7 @@ def test_verify(tmp_file):
     assert p.verify(sha256[:14]) == None
     assert p.verify(sha256[:14], algorithm='sha256') == None
     assert p.verify(sha256, algorithm='sha1') == None
+    assert p.verify(sha256, algorithm=None, size=10) == 'sha256'
 
     assert p.verify(shake_128) != None
     assert p.verify(shake_128, algorithm='shake_128') == 'shake_128'
