@@ -79,7 +79,7 @@ class Path(pathlib.Path):
         if not size:
             size = self._digest_chunk
 
-        if digest is None:
+        if not digest:
             digest = self._digest_default
 
         with self.open(mode='rb') as f:
@@ -154,14 +154,14 @@ class Path(pathlib.Path):
         ''' time of the last modification in nanoseconds '''
         return self.stat().st_mtime_ns
 
-    def verify(self, hash: str, algorithm: Optional[str] = None) -> Union[str, None]:
+    def verify(self, hexdigest: str, algorithm: Optional[str] = None) -> Union[str, None]:
         ''' verify if file has the correct hash '''
-        hash = hash.strip().lower()
-        size = int(len(hash) / 2)
+        hexdigest = hexdigest.strip().lower()
+        size = int(len(hexdigest) / 2)
 
         if algorithm:
             result = self.hexdigest(algorithm, length=size)
-            return algorithm if result == hash else None
+            return algorithm if result == hexdigest else None
 
         for algorithm in self.algorithms_available:
             hasher = hashlib.new(algorithm)
@@ -172,13 +172,9 @@ class Path(pathlib.Path):
             else:
                 kwargs = dict()
 
-            if self.digest(lambda: hasher).hexdigest(**kwargs) == hash:
+            if self.digest(lambda: hasher).hexdigest(**kwargs) == hexdigest:
                 break
         else:
             return None
 
         return algorithm
-
-
-if __name__ == '__main__':
-    pass

@@ -1,5 +1,6 @@
 from . import Path
 import functools
+from typing import Optional, Union
 
 
 def cache(func):
@@ -40,8 +41,12 @@ class Path(Path):
     def hexdigest(
         self, algorithm: str = None, *, size: int = None, length: int = None
     ) -> str:
-        return super().hexdigest(algorithm=algorithm, size=size, length=length)
+        return super().hexdigest(algorithm=algorithm.lower(), size=size, length=length)
 
     @cache
     def eol_count(self, eol: str = None, size: int = None) -> int:
         return super().eol_count(eol=eol, size=size)
+
+    @cache
+    def verify(self, hexdigest: str, algorithm: Optional[str] = None) -> Union[str, None]:
+        return super().verify(hexdigest.strip().lower(), algorithm=algorithm.lower())

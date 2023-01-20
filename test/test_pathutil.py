@@ -137,13 +137,6 @@ def test_iter_bytes(tmp_file):
     assert list(my_generator)[0] == str(CONTENT).encode()
 
 
-def test_main():
-    ''' run script in virtual environment '''
-    p = subprocess.run(r'pipenv run src\pathlibutil\pathutil.py', shell=True)
-
-    assert p.returncode == 0
-
-
 def test_copy(tmp_file, dst_path):
     src = Path(tmp_file)
 
