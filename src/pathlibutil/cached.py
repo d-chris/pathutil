@@ -24,7 +24,8 @@ def cache(func):
             args_cache = dict()
             self.__cache__[lock][func.__name__] = args_cache
 
-        key = args + tuple(sorted(kwargs.items()))
+        # key = args + tuple(sorted(kwargs.items()))
+        key = args
         try:
             value = args_cache[key]
         except KeyError:
@@ -39,17 +40,9 @@ def cache(func):
 class Path(Path):
 
     @cache
-    def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
-        return super().hexdigest(algorithm=algorithm, size=size, length=length)
+    def _count(self, substr: str, /, *, size: int) -> int:
+        return super()._count(substr, size=size)
 
     @cache
-    def digest(self, digest: Union[str, Callable] = None, *, size: int = None) -> 'hashlib._Hash':
-        return super().digest(digest, size=size)
-
-    @cache
-    def eol_count(self, eol: str = None, size: int = None) -> int:
-        return super().eol_count(eol=eol, size=size)
-
-    @cache
-    def verify(self, hexdigest: str, algorithm: Optional[str] = None, size: Optional[int] = None) -> Union[str, None]:
-        return super().verify(hexdigest, algorithm=algorithm, size=size)
+    def _file_digest(self, algorithm: str, /, *, _bufsize: int) -> 'hashlib._Hash':
+        return super()._file_digest(algorithm, _bufsize=_bufsize)

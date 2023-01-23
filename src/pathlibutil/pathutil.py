@@ -14,12 +14,12 @@ class Path(pathlib.Path):
         'shake_256': 256
     }
 
-    _digest_default = hashlib.md5
+    _digest_default = 'md5'
 
     _digest_chunk = 2**20
 
     @property
-    def default_digest(self) -> 'hashlib._Hash':
+    def default_digest(self) -> str:
         return self._digest_default
 
     def iter_lines(self, encoding: str = None) -> str:
@@ -49,45 +49,42 @@ class Path(pathlib.Path):
 
     def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
         ''' calculate a hashsum using an algorithm '''
-        algorithm = self.algorithm(algorithm)
+        h = self.digest(algorithm, size=size)
 
-        try:
-            h = hashlib.new(algorithm)
-
-        except TypeError as e:
-            h = self._digest_default()
-
-        for chunk in self.iter_bytes(size):
-            h.update(chunk)
-
-        try:
-            bytes = self._digest_length[algorithm]
-
-            if length <= 0:
-                raise ValueError(
-                    'length for digest needs do be a positive integer')
-
-            kwargs = {'length': length}
-
-        except KeyError as e:
+        if h.digest_size != 0:
             kwargs = dict()
-        except TypeError as e:
-            kwargs = {'length': bytes}
+        else:
+            if length:
+                kwargs = {'length': length}
+            else:
+                try:
+                    key = self.algorithm(algorithm)
+                    kwargs = {'length': self._digest_length[key]}
+                except KeyError:
+                    raise TypeError(
+                        "hexdigest() missing required argument 'length'")
+
+            if kwargs['length'] < 0:
+                raise ValueError(
+                    "hexdigest() required argument 'length' to be a positive integer")
 
         return h.hexdigest(**kwargs)
 
-    def digest(self, digest: Union[str, Callable] = None, *, size: int = None) -> 'hashlib._Hash':
+    def digest(self, algorithm: str = None, *, size: int = None) -> 'hashlib._Hash':
         ''' digest of the binary file-content '''
-        if not size:
+        if not size or size < 0:
             size = self._digest_chunk
 
-        if not digest:
-            digest = self._digest_default
-        else:
-            digest = self.algorithm(digest)
+        if not algorithm:
+            algorithm = self._digest_default
+
+        return self._file_digest(self.algorithm(algorithm), _bufsize=size)
+
+    def _file_digest(self, algorithm: str, /, *, _bufsize: int) -> 'hashlib._Hash':
+        digest = (lambda: hashlib.new(algorithm))
 
         with self.open(mode='rb') as f:
-            h = hashlib.file_digest(f, digest, _bufsize=size)
+            h = hashlib.file_digest(f, digest, _bufsize=_bufsize)
 
         return h
 
@@ -101,16 +98,21 @@ class Path(pathlib.Path):
         try:
             return value.strip().lstrip('.').lower()
         except AttributeError:
-            return value
+            return self._digest_default
 
     def eol_count(self, eol: str = None, size: int = None) -> int:
         ''' return the number of end-of-line characters'''
         try:
             substr = eol.encode()
-
         except AttributeError as e:
             substr = '\n'.encode()
 
+        if not size:
+            size = self._digest_chunk
+
+        return self._count(substr, size=size)
+
+    def _count(self, substr: str, /, *, size: int) -> int:
         return sum(chunk.count(substr) for chunk in self.iter_bytes(size))
 
     def copy(self, dst: Union[str, 'Path'], *, parents: bool = True, **kwargs) -> Tuple['Path', int]:
@@ -165,7 +167,7 @@ class Path(pathlib.Path):
         ''' time of the last modification in nanoseconds '''
         return self.stat().st_mtime_ns
 
-    def verify(self, hexdigest: str, algorithm: Optional[str] = None, size: Optional[int] = None) -> Union[str, None]:
+    def verify(self, hexdigest: str, algorithm: Optional[str] = None, *, size: Optional[int] = None) -> Union[str, None]:
         ''' verify if file has the correct hash '''
         hexdigest = hexdigest.strip().lower()
         digest_size = int(len(hexdigest) / 2)
@@ -175,15 +177,14 @@ class Path(pathlib.Path):
             return algorithm if result == hexdigest else None
 
         for algorithm in self.algorithms_available:
-            hasher = hashlib.new(algorithm)
-            if hasher.digest_size == 0:
-                kwargs = {'length': digest_size}
-            elif digest_size != hasher.digest_size:
-                continue
-            else:
-                kwargs = dict()
+            h = hashlib.new(algorithm)
 
-            if self.digest(lambda: hasher, size=size).hexdigest(**kwargs) == hexdigest:
+            if h.digest_size not in (digest_size, 0):
+                continue
+
+            result = self.hexdigest(algorithm, length=digest_size, size=size)
+
+            if result == hexdigest:
                 break
         else:
             return None

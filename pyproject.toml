@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pathlibutil"
-version = "0.0.3"
+version = "0.0.4"
 authors = [{ name = "Christoph Dörrer" }]
 description = "extend pathlib with some handy features"
 readme = "README.md"
@@ -23,5 +23,5 @@ classifiers = [
 minversion = "6.0"
 pythonpath = "src"
 testpaths = "test"
-addopts = "--random-order -v"
+addopts = "--random-order -v -s"
 # addopts = "--cov=src --cov-report=html:test/report"
