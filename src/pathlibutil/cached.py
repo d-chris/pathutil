@@ -39,6 +39,17 @@ def cache(func):
 
 class Path(Path):
 
+    def cached(self, func: str = None) -> dict:
+        try:
+            cache, *_ = self.__cache__.values()
+
+            if func:
+                return cache[func]
+            else:
+                return cache
+        except (AttributeError, KeyError) as e:
+            return dict()
+
     @cache
     def _count(self, substr: str, /, *, size: int) -> int:
         return super()._count(substr, size=size)

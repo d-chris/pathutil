@@ -66,7 +66,7 @@ class Path(pathlib.Path):
 
             if kwargs['length'] < 0:
                 raise ValueError(
-                    "hexdigest() required argument 'length' to be a positive integer")
+                    "hexdigest() required argument 'length' has to be a positive integer")
 
         return h.hexdigest(**kwargs)
 
@@ -74,9 +74,6 @@ class Path(pathlib.Path):
         ''' digest of the binary file-content '''
         if not size or size < 0:
             size = self._digest_chunk
-
-        if not algorithm:
-            algorithm = self._digest_default
 
         return self._file_digest(self.algorithm(algorithm), _bufsize=size)
 
