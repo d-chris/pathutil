@@ -27,6 +27,73 @@ def dst_path(tmp_path: pathlib.Path) -> str:
     return str(dest)
 
 
+@pytest.fixture()
+def dir_tree(tmp_path: pathlib.Path) -> str:
+    dir = tmp_path / 'dir1'
+    dir.mkdir()
+
+    file = dir / 'file1.txt'
+    file.touch()
+
+    file = dir / 'file2.txt'
+    file.touch()
+
+    return str(dir)
+
+
+def test_delete_recursive(dir_tree: str):
+    p = Path(dir_tree)
+
+    assert p.exists() == True
+
+    with pytest.raises(OSError):
+        p.delete()
+
+    assert p.exists() == True
+    p.delete(recursive=True)
+    assert p.exists() == False
+
+    with pytest.raises(FileNotFoundError):
+        p.delete(recursive=True)
+
+    try:
+        p.delete(recursive=True, missing_ok=True)
+    except Exception:
+        assert False
+
+
+def test_delete(dir_tree: str):
+    p = Path(dir_tree)
+
+    files = [file for file in p.iterdir()]
+    assert len(files) == 2
+
+    assert files[0].exists() == True
+    files[0].delete()
+    assert files[0].exists() == False
+
+    with pytest.raises(FileNotFoundError):
+        files[0].delete()
+
+    try:
+        files[0].delete(missing_ok=True)
+    except Exception:
+        assert False
+
+    assert files[1].exists() == True
+    files[1].delete(recursive=True)
+    assert p.exists() == False
+
+
+def test_delete_try(dir_tree: str):
+    p = Path(dir_tree)
+
+    for file in p.iterdir():
+        file.delete(recursive='try')
+
+    assert p.exists() == False
+
+
 def test_eol_count(tmp_file):
     p = Path(tmp_file)
     assert p.eol_count() == 2

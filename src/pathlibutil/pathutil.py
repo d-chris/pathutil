@@ -133,6 +133,18 @@ class Path(pathlib.Path):
 
         return (Path(destination), result)
 
+    def delete(self, recursive: bool = False, missing_ok: bool = False, **kwargs):
+        try:
+            if self.is_file():
+                self.unlink(prune=recursive)
+            elif self.is_dir():
+                self.rmdir(recursive=True if recursive else False, **kwargs)
+            else:
+                raise FileNotFoundError
+        except FileNotFoundError as e:
+            if not missing_ok:
+                raise
+
     def rmdir(self, *, recursive=False, **kwargs):
         ''' deletes a directory with all files, check shutil::rmtree for kwargs '''
 
