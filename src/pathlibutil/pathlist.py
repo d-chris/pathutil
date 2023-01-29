@@ -33,13 +33,46 @@ class PathList(list):
     def apply(self, func: Callable[[Path], Any]) -> list[Any]:
         results = list()
         with cf.ThreadPoolExecutor() as exec:
-            for result in [exec.submit(func, file) for file in self]:
+            for thread in [exec.submit(func, file) for file in self]:
                 try:
-                    results.append(result.result())
+                    results.append(thread.result())
                 except (FileNotFoundError, PermissionError) as e:
                     results.append(None)
 
         return results
+
+
+def hashsum(infiles, outfile, algorithm=None, length=None, header: str = None):
+    def hexdigest(file: Path, algorithm=None, length=None):
+        return file.hexdigest(algorithm, length=length)
+
+    def format(tuple):
+        hash, file = tuple
+        return (hash.upper(), file.resolve())
+
+    def comment(line: str):
+        return f"# {line.lstrip('# ')}\n"
+
+    files = PathList(infiles)
+    hashes = files.apply(hexdigest)
+
+    if all(hashes) == False:
+        raise FileNotFoundError('one or more input files where not accessable')
+
+    root = Path(outfile).resolve()
+
+    with root.open(mode='wt', encoding='utf-8') as f:
+        if header:
+            for line in map(comment, header.split('\n')):
+                f.write(line)
+
+            f.write('\n')
+
+        for hash, file in map(format, zip(hashes, files)):
+            if file.is_relative_to(root.parent):
+                file = file.relative_to(root.parent)
+
+            f.write(f"{hash} *{file}\n")
 
 
 class HashFile:
