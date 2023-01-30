@@ -1,6 +1,6 @@
 import re
 from . import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 import concurrent.futures as cf
 
 
@@ -30,9 +30,9 @@ class PathList(list):
         else:
             super().extend(self.Path(item) for item in other)
 
-    def apply(self, func: Callable[[Path], Any]) -> list[Any]:
+    def apply(self, func: Callable[[Path], Any], **kwargs) -> list[Any]:
         results = list()
-        with cf.ThreadPoolExecutor() as exec:
+        with cf.ThreadPoolExecutor(**kwargs) as exec:
             for thread in [exec.submit(func, file) for file in self]:
                 try:
                     results.append(thread.result())
@@ -42,8 +42,12 @@ class PathList(list):
         return results
 
 
-def hashsum(infiles, outfile, algorithm=None, length=None, header: str = None):
-    def hexdigest(file: Path, algorithm=None, length=None):
+def hashsum(infiles: Iterable, outfile: str, header: str = None, *, algorithm: str = None, length: int = None) -> Path:
+    root = Path(outfile).resolve()
+    if not algorithm:
+        algorithm = root.suffix
+
+    def hexdigest(file: Path) -> str:
         return file.hexdigest(algorithm, length=length)
 
     def format(tuple):
@@ -53,13 +57,14 @@ def hashsum(infiles, outfile, algorithm=None, length=None, header: str = None):
     def comment(line: str):
         return f"# {line.lstrip('# ')}\n"
 
-    files = PathList(infiles)
-    hashes = files.apply(hexdigest)
+    files = PathList(infiles)  # convert files to a List[Path]
+    hashes = files.apply(hexdigest)  # List[str] contains file-hashes
 
     if all(hashes) == False:
-        raise FileNotFoundError('one or more input files where not accessable')
-
-    root = Path(outfile).resolve()
+        args = [file.as_posix()
+                for file, hash in zip(files, hashes) if not hash]
+        msg = f"{len(args)} file(s) inaccessable"
+        raise FileNotFoundError(msg, args)
 
     with root.open(mode='wt', encoding='utf-8') as f:
         if header:
@@ -73,6 +78,8 @@ def hashsum(infiles, outfile, algorithm=None, length=None, header: str = None):
                 file = file.relative_to(root.parent)
 
             f.write(f"{hash} *{file}\n")
+
+    return root
 
 
 class HashFile:
