@@ -1,7 +1,8 @@
-from . import Path
 import functools
-from typing import Optional, Union, Callable
 import hashlib
+
+from .pathlist import PathList as _PathList
+from .pathutil import Path as _Path
 
 
 def cache(func):
@@ -37,7 +38,7 @@ def cache(func):
     return cached
 
 
-class Path(Path):
+class Path(_Path):
 
     def cached(self, func: str = None) -> dict:
         try:
@@ -57,3 +58,12 @@ class Path(Path):
     @cache
     def _file_digest(self, algorithm: str, /, *, _bufsize: int) -> 'hashlib._Hash':
         return super()._file_digest(algorithm, _bufsize=_bufsize)
+
+
+class PathList(_PathList):
+    @staticmethod
+    def Path(item):
+        if isinstance(item, Path):
+            return item
+
+        return Path(item)

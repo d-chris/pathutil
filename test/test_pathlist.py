@@ -1,9 +1,11 @@
-from pathlibutil.pathlist import PathList, HashFile, hashsum
+from pathlibutil.pathlist import PathList
+from pathlibutil.hashsum import HashFile, hashsum
 from pathlibutil import Path
 
 
 def test_hashsum():
-    hashsum(['file1.txt', 'file2.txt'], 'files.md5', header='hallo\nwelt')
+    hashsum(['Pipfile', 'LICENSE', 'README.md', '../pstester.7z'],
+            'files.md5')
 
 
 def test_hexdigest():

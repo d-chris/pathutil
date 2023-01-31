@@ -1,64 +1,49 @@
-from . import Path
-from typing import Iterable, Tuple, Generator, Dict, List, Union
 import os
 import re
+from typing import Dict, Generator, Iterable, List, Tuple, Union
 
-import concurrent.futures as cf
+from .pathlist import PathList
+from .pathutil import Path
 
 
-def hashsum(
-    hashfile: str,
-    files: Iterable,
-    *,
-    header: str = None,
-    algorithm: str = None,
-    size: int = None
-) -> Path:
-    hashfile = Path(hashfile)
+def hashsum(infiles: Iterable, outfile: str, header: str = None, *, algorithm: str = None, length: int = None) -> Path:
+    root = Path(outfile).resolve()
+    if not algorithm:
+        algorithm = root.suffix
 
-    if algorithm is None:
-        algorithm = hashfile.suffix.lstrip('.')
-        if algorithm not in hashfile.algorithms_available:
-            raise ValueError('unknown suffix or specify algorithm')
-    else:
-        hashfile = hashfile.with_suffix(f".{algorithm}")
+    def hexdigest(file: Path) -> str:
+        return file.hexdigest(algorithm, length=length)
 
-    with hashfile.open(mode='wt', encoding='utf-8') as f:
-        if header != None:
-            f.writelines(
-                [f"# {line}\n" for line in header.split('\n') if line]
-            )
+    def format(tuple):
+        hash, file = tuple
+        return (hash.upper(), file.resolve())
 
-            if f.seek(0, os.SEEK_END) > 0:
-                f.write('\n')
+    def comment(line: str):
+        return f"# {line.lstrip('# ')}\n"
 
-        dest = hashfile.resolve().parent
+    files = PathList(infiles)  # convert files to a List[Path]
+    hashes = files.apply(hexdigest)  # List[str] contains file-hashes
 
-        kwargs = {
-            'algorithm': algorithm,
-            'size': size
-        }
+    if all(hashes) == False:
+        args = [file.as_posix()
+                for file, hash in zip(files, hashes) if not hash]
+        msg = f"{len(args)} file(s) inaccessable"
+        raise FileNotFoundError(msg, args)
 
-        def calc_hashes(file: Path, dest: Path, **kwargs) -> str:
-            file = file.resolve()
+    with root.open(mode='wt', encoding='utf-8') as f:
+        if header:
+            for line in map(comment, header.split('\n')):
+                f.write(line)
 
-            if file.is_relative_to(dest):
-                filename = file.relative_to(dest)
-            else:
-                filename = file
+            f.write('\n')
 
-            return f"{file.hexdigest(**kwargs)} *{filename}"
+        for hash, file in map(format, zip(hashes, files)):
+            if file.is_relative_to(root.parent):
+                file = file.relative_to(root.parent)
 
-        with cf.ThreadPoolExecutor() as exec:
-            results = [
-                exec.submit(calc_hashes, file, dest, **kwargs)
-                for file in files
-            ]
+            f.write(f"{hash} *{file}\n")
 
-            for result in cf.as_completed(results):
-                f.write(f"{result.result()}\n")
-
-    return hashfile
+    return root
 
 
 def hashparse(
@@ -112,3 +97,49 @@ def hashcheck(
             result[key].append(file)
 
     return result
+
+
+class HashFile:
+    regex = regex = re.compile(
+        r'^(?:(?P<comment>#.*?)|(?:(?P<hash>[a-f0-9]{8,}) \*(?P<filename>.*?)))$', re.IGNORECASE)
+
+    def __init__(self, filename: str, encoding='utf-8'):
+        self.filename = Path(filename)
+        self.comments = list()
+        self.hashes = list()
+        self.files = PathList([])
+
+        for line in self.filename.iter_lines(encoding=encoding):
+            match = self.regex.match(line)
+
+            if not match:
+                continue
+
+            match = match.groupdict()
+
+            if match['comment']:
+                self.comments.append(match['comment'])
+            else:
+                filename = match['filename']
+                hash = match['hash']
+
+                if not filename or not hash:
+                    continue
+
+                self.files.append(filename)
+                self.hashes.append(hash)
+
+    def verify(self, algorithm=None):
+        result = list()
+        for file, hash in zip(self.files, self.hashes):
+            try:
+                h = file.verify(hash, algorithm)
+                if not h:
+                    hash = False
+
+            except (FileNotFoundError, PermissionError) as e:
+                hash = None
+            finally:
+                result.append(hash)
+
+        return result

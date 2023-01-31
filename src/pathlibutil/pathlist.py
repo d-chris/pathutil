@@ -1,7 +1,7 @@
-import re
-from . import Path
-from typing import Any, Callable, Iterable
 import concurrent.futures as cf
+from typing import Any, Callable
+
+from .pathutil import Path
 
 
 class PathList(list):
@@ -40,89 +40,3 @@ class PathList(list):
                     results.append(None)
 
         return results
-
-
-def hashsum(infiles: Iterable, outfile: str, header: str = None, *, algorithm: str = None, length: int = None) -> Path:
-    root = Path(outfile).resolve()
-    if not algorithm:
-        algorithm = root.suffix
-
-    def hexdigest(file: Path) -> str:
-        return file.hexdigest(algorithm, length=length)
-
-    def format(tuple):
-        hash, file = tuple
-        return (hash.upper(), file.resolve())
-
-    def comment(line: str):
-        return f"# {line.lstrip('# ')}\n"
-
-    files = PathList(infiles)  # convert files to a List[Path]
-    hashes = files.apply(hexdigest)  # List[str] contains file-hashes
-
-    if all(hashes) == False:
-        args = [file.as_posix()
-                for file, hash in zip(files, hashes) if not hash]
-        msg = f"{len(args)} file(s) inaccessable"
-        raise FileNotFoundError(msg, args)
-
-    with root.open(mode='wt', encoding='utf-8') as f:
-        if header:
-            for line in map(comment, header.split('\n')):
-                f.write(line)
-
-            f.write('\n')
-
-        for hash, file in map(format, zip(hashes, files)):
-            if file.is_relative_to(root.parent):
-                file = file.relative_to(root.parent)
-
-            f.write(f"{hash} *{file}\n")
-
-    return root
-
-
-class HashFile:
-    regex = regex = re.compile(
-        r'^(?:(?P<comment>#.*?)|(?:(?P<hash>[a-f0-9]{8,}) \*(?P<filename>.*?)))$', re.IGNORECASE)
-
-    def __init__(self, filename: str, encoding='utf-8'):
-        self.filename = Path(filename)
-        self.comments = list()
-        self.hashes = list()
-        self.files = PathList([])
-
-        for line in self.filename.iter_lines(encoding=encoding):
-            match = self.regex.match(line)
-
-            if not match:
-                continue
-
-            match = match.groupdict()
-
-            if match['comment']:
-                self.comments.append(match['comment'])
-            else:
-                filename = match['filename']
-                hash = match['hash']
-
-                if not filename or not hash:
-                    continue
-
-                self.files.append(filename)
-                self.hashes.append(hash)
-
-    def verify(self, algorithm=None):
-        result = list()
-        for file, hash in zip(self.files, self.hashes):
-            try:
-                h = file.verify(hash, algorithm)
-                if not h:
-                    hash = False
-
-            except (FileNotFoundError, PermissionError) as e:
-                hash = None
-            finally:
-                result.append(hash)
-
-        return result

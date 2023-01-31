@@ -1,9 +1,9 @@
-import pathlib
+import distutils.file_util as dfutil
 import hashlib
 import os
+import pathlib
 import shutil
-import distutils.file_util as dfutil
-from typing import Tuple, Union, Callable, Optional, Any
+from typing import Any, Optional, Tuple, Union
 
 
 class Path(pathlib.Path):
