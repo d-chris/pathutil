@@ -1,15 +1,9 @@
 import pytest
 
-from pathlibutil import *
+from pathlibutil.hashsum import _Hasher
 
 
-def test_hashsum():
-    pass
+def test_hasher():
+    p = _Hasher('pathutil.md5')
 
-
-def test_hashcheck():
-    pass
-
-
-def test_hashparse():
     pass

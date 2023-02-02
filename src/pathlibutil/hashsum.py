@@ -46,100 +46,84 @@ def hashsum(infiles: Iterable, outfile: str, header: str = None, *, algorithm: s
     return root
 
 
-def hashparse(
-    hashfile: str,
-) -> Generator[Tuple[str, Path], None, None]:
-
-    hashfile = Path(hashfile)
-
-    root = hashfile.resolve().parent
-
+class _Hasher:
     regex = re.compile(
         r'^(?P<hash>[a-f0-9]{8,}) \*(?P<filename>.*?)$',
         re.IGNORECASE
     )
 
-    for match in map(lambda line: regex.match(line.strip()), hashfile.iter_lines(encoding='utf-8')):
-        if match is None:
-            continue
+    def __init__(self, infile):
+        self.root = Path(infile).resolve()
 
-        try:
-            hash, filename = match.group('hash'), Path(match.group('filename'))
-        except IndexError:
-            continue
+        self._comments = list()
+        self._lines = dict()
 
-        if not filename.is_absolute():
-            filename = root.joinpath(filename)
-
-        yield (hash, filename)
-
-
-def hashcheck(
-    hashfile: str,
-    algorithm: str = None,
-    *,
-    size: int = None
-) -> Dict[Union[bool, None], List[Path]]:
-
-    kwargs = {
-        'algorithm': algorithm,
-        'size': size
-    }
-
-    result = {True: [], False: [], None: []}
-
-    for hash, file in hashparse(hashfile):
-        try:
-            key = bool(file.verify(hash, **kwargs))
-        except (FileNotFoundError, PermissionError) as e:
-            result[None].append(file)
-        else:
-            result[key].append(file)
-
-    return result
-
-
-class HashFile:
-    regex = regex = re.compile(
-        r'^(?:(?P<comment>#.*?)|(?:(?P<hash>[a-f0-9]{8,}) \*(?P<filename>.*?)))$', re.IGNORECASE)
-
-    def __init__(self, filename: str, encoding='utf-8'):
-        self.filename = Path(filename)
-        self.comments = list()
-        self.hashes = list()
-        self.files = PathList([])
-
-        for line in self.filename.iter_lines(encoding=encoding):
-            match = self.regex.match(line)
-
-            if not match:
+        for line in self.root.iter_lines(encoding='utf-8'):
+            if not line:
                 continue
 
-            match = match.groupdict()
+            if line.startswith('#'):
+                self._comments.append(line)
+                continue
 
-            if match['comment']:
-                self.comments.append(match['comment'])
-            else:
-                filename = match['filename']
-                hash = match['hash']
+            match = self.regex.match(line)
 
-                if not filename or not hash:
-                    continue
-
-                self.files.append(filename)
-                self.hashes.append(hash)
-
-    def verify(self, algorithm=None):
-        result = list()
-        for file, hash in zip(self.files, self.hashes):
             try:
-                h = file.verify(hash, algorithm)
-                if not h:
-                    hash = False
+                file = Path(match.group('filename'))
+                hash = match.group('hash')
+            except (AttributeError, IndexError) as e:
+                continue
 
+            if not file.is_absolute():
+                file = self.root.parent.joinpath(file)
+
+            self._lines[file] = hash.upper()
+
+    @property
+    def files(self) -> PathList:
+        return PathList(self._lines.keys())
+
+    @property
+    def hashes(self) -> List[str]:
+        return list(self._lines.values())
+
+    @property
+    def comments(self) -> List[str]:
+        return self._comments
+
+    @property
+    def lines(self) -> Dict[Path, str]:
+        return self._lines
+
+    def hexdigest(self, algorithm=None):
+        if not algorithm:
+            algorithm = self.root.suffix
+
+        def _hexdigest(x: Path):
+            try:
+                h = x.hexdigest(algorithm=algorithm).upper()
+
+                if not h:
+                    h = False
             except (FileNotFoundError, PermissionError) as e:
-                hash = None
-            finally:
-                result.append(hash)
+                return None
+
+            return h
+
+        return self.files.apply(_hexdigest)
+
+    def verify(self, algorithm = None):
+        if not algorithm:
+            algorithm = self.root.suffix
+
+        result = dict()
+
+        for (k, v), h in zip(self.lines.items(), self.hexdigest(algorithm)):
+            if v == h:
+                result[k] = True
+            else:
+                result[k] = h
 
         return result
+
+
