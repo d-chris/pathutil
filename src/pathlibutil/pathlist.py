@@ -12,8 +12,13 @@ class PathList(list):
 
         return Path(item)
 
-    def __init__(self, iterable):
-        super().__init__([self.Path(item) for item in iterable])
+    def __init__(self, iterable=None):
+        try:
+            items = [self.Path(item) for item in iterable]
+        except TypeError:
+            items = []
+
+        super().__init__(items)
 
     def __setitem__(self, index, item):
         super().__setitem__(index, self.Path(item))

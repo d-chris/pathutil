@@ -1,48 +1,40 @@
+import pytest
+
 from pathlibutil.pathlist import PathList
-from pathlibutil.hashsum import HashFile, hashsum
 from pathlibutil import Path
 
 
-def test_hashsum():
-    hashsum(['Pipfile', 'LICENSE', 'README.md', '../pstester.7z'],
-            'files.md5')
-
-
-def test_hexdigest():
-    p = PathList(['file1.txt', 'file2.txt', 'file4.txt'])
-
-    def hexdigest(item: Path) -> str:
-        return item.hexdigest('md5')
-
-    h = p.apply(hexdigest)
-
-    pass
-
-
 def test_pathlist():
-    file_list = ['file1.txt', 'file2.txt', 'file3.txt']
+    p = PathList()
 
-    p = PathList(file_list)
+    assert len(p) == 0
 
-    p.append(Path('file4.txt'))
-    p.append('file5.txt')
+    p = PathList([])
 
-    p.extend(['file6.txt', 'file7.txt'])
-    p.extend([Path('file7.txt'), 'file8.txt'])
-    p.extend(PathList(['file9.txt', 'file10.txt']))
+    assert len(p) == 0
 
-    del p[-1]
+    p = PathList(['file1.txt', './test/', Path('file3.txt')])
 
-    p9 = Path('file10.txt')
-    p[9] = p9
-    assert id(p[9]) == id(p9)
+    assert len(p) == 3
 
-    pass
+    for item in p:
+        assert isinstance(item, Path)
 
 
-def test_pashclass():
-    p = HashFile('pathutil.md5')
-    l = p.verify()
-    p.all('md5')
+def test_apply():
+    p = PathList(['file1.txt', 'file2.txt'])
 
-    pass
+    def suffix(x: Path):
+        return x.suffix
+
+    suffixes = p.apply(suffix)
+
+    assert len(suffixes) == 2
+
+    for item in suffixes:
+        assert item == '.txt'
+
+    names = p.apply(lambda x: x.stem)
+
+    assert names[0] == 'file1'
+    assert names[-1] == 'file2'
