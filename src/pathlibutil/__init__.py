@@ -1,4 +1,3 @@
+from .hashsum import HashFile
+from .pathlist import PathList
 from .pathutil import Path
-from .hashsum import hashsum
-
-__all__ = ['Path', 'hashsum', 'hashcheck', 'hashparse']

@@ -85,17 +85,18 @@ class Path(pathlib.Path):
 
         return h
 
-    @property
-    def algorithms_available(self) -> set[str]:
+    @staticmethod
+    def algorithms_available() -> set[str]:
         ''' names of available hash algorithms '''
         return hashlib.algorithms_available
 
-    def algorithm(self, value: Union[str, Any]) -> Union[str, Any]:
+    @classmethod
+    def algorithm(cls, value: Union[str, Any]) -> Union[str, Any]:
         ''' converts file suffix into a valid algorithm string '''
         try:
             return value.strip().lstrip('.').lower()
         except AttributeError:
-            return self._digest_default
+            return cls._digest_default
 
     def eol_count(self, eol: str = None, size: int = None) -> int:
         ''' return the number of end-of-line characters'''
@@ -185,7 +186,7 @@ class Path(pathlib.Path):
             result = self.hexdigest(algorithm, length=digest_size, size=size)
             return algorithm if result == hexdigest else None
 
-        for algorithm in self.algorithms_available:
+        for algorithm in self.algorithms_available():
             h = hashlib.new(algorithm)
 
             if h.digest_size not in (digest_size, 0):

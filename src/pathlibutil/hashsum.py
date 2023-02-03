@@ -1,6 +1,5 @@
-import os
 import re
-from typing import Dict, Generator, Iterable, List, Tuple, Union
+from typing import Dict, Generator, Iterable, List, Tuple
 
 from .pathlist import PathList
 from .pathutil import Path
@@ -46,19 +45,24 @@ def hashsum(infiles: Iterable, outfile: str, header: str = None, *, algorithm: s
     return root
 
 
-class _Hasher:
+class HashFile:
     regex = re.compile(
         r'^(?P<hash>[a-f0-9]{8,}) \*(?P<filename>.*?)$',
         re.IGNORECASE
     )
 
-    def __init__(self, infile):
-        self.root = Path(infile).resolve()
+    def __init__(self, infile: str, algorithm: str = None):
+        self._root = Path(infile).resolve()
+
+        self._algorithm = Path.algorithm(algorithm)
+
+        if self._algorithm not in Path.algorithms_available():
+            raise ValueError
 
         self._comments = list()
         self._lines = dict()
 
-        for line in self.root.iter_lines(encoding='utf-8'):
+        for line in self._root.iter_lines(encoding='utf-8'):
             if not line:
                 continue
 
@@ -75,7 +79,7 @@ class _Hasher:
                 continue
 
             if not file.is_absolute():
-                file = self.root.parent.joinpath(file)
+                file = self._root.parent.joinpath(file)
 
             self._lines[file] = hash.upper()
 
@@ -89,41 +93,82 @@ class _Hasher:
 
     @property
     def comments(self) -> List[str]:
-        return self._comments
+        return self._comments.copy()
 
     @property
     def lines(self) -> Dict[Path, str]:
-        return self._lines
+        return self._lines.copy()
 
-    def hexdigest(self, algorithm=None):
-        if not algorithm:
-            algorithm = self.root.suffix
+    def __hash__(self) -> int:
+        return hash((self._root, self._algorithm))
 
-        def _hexdigest(x: Path):
-            try:
-                h = x.hexdigest(algorithm=algorithm).upper()
+    def __len__(self) -> int:
+        return len(self._lines)
 
-                if not h:
-                    h = False
-            except (FileNotFoundError, PermissionError) as e:
-                return None
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}('{self._root.as_posix()}', algorithm='{self._algorithm}')"
 
-            return h
+    def __getitem__(self, index) -> str:
+        _, hash = self._get_result()[index]
 
-        return self.files.apply(_hexdigest)
+        return hash
 
-    def verify(self, algorithm = None):
-        if not algorithm:
-            algorithm = self.root.suffix
+    def __iter__(self) -> Generator[Path, None, None]:
+        for k, v in self._get_result().items():
+            yield k, v
 
-        result = dict()
+    def match(self) -> Generator[Path, None, None]:
+        for file, (old, new) in self:
+            if not new:
+                continue
 
-        for (k, v), h in zip(self.lines.items(), self.hexdigest(algorithm)):
-            if v == h:
-                result[k] = True
-            else:
-                result[k] = h
+            if old == new:
+                yield file
 
-        return result
+    def missing(self) -> Generator[Path, None, None]:
+        for file, (_, new) in self:
+            if new:
+                continue
 
+            yield file
 
+    def modified(self) -> Generator[Path, None, None]:
+        for file, (old, new) in self:
+            if not new:
+                continue
+
+            if old != new:
+                yield file
+
+    @property
+    def hexdigest(self) -> List[str]:
+        return self._get_hexdigest().copy()
+
+    def _get_hexdigest(self):
+        try:
+            return self._hexdigest
+        except AttributeError:
+            def _digest(x: Path):
+                try:
+                    return x.hexdigest(algorithm=self._algorithm).upper()
+                except (FileNotFoundError, PermissionError) as e:
+                    return None
+
+            self._hexdigest = self.files.apply(_digest)
+
+        return self._hexdigest
+
+    @property
+    def result(self) -> Dict[Path, Tuple[str, str]]:
+        return self._get_result().copy()
+
+    def _get_result(self):
+        try:
+            return self._result
+        except AttributeError:
+            self._result = dict()
+
+            for (file, file_hash), new_hash in zip(self._lines.items(), self._get_hexdigest()):
+                self._result[file] = (file_hash, new_hash)
+
+        return self._result

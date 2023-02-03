@@ -175,11 +175,11 @@ def test_digest(tmp_file):
 
 
 def test_available_algorithm():
-    p = Path()
+    p = Path.algorithms_available()
 
-    assert isinstance(p.algorithms_available, set)
+    assert isinstance(p, set)
 
-    for a in p.algorithms_available:
+    for a in p:
         assert a in hashlib.algorithms_available
 
 
