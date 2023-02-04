@@ -3,7 +3,7 @@ import hashlib
 import os
 import pathlib
 import shutil
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, Self
 
 
 class Path(pathlib.Path):
@@ -46,6 +46,12 @@ class Path(pathlib.Path):
                     yield chunk
                 else:
                     break
+
+    def with_suffix(self: Self, suffix: str, delimiter: str = None) -> Self:
+        if delimiter:
+            suffix = f"{delimiter}{suffix.lstrip(delimiter)}"
+
+        return super().with_suffix(suffix)
 
     def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
         ''' calculate a hashsum using an algorithm '''
