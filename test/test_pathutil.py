@@ -351,12 +351,12 @@ def test_suffix(tmp_file):
         a = p.with_suffix('log')
 
     with pytest.raises(ValueError):
-        a = p.with_suffix('log', seperator=False)
+        a = p.with_suffix('log', separator=False)
 
     a = p.with_suffix('log', True)
     assert str(a).endswith('.log')
 
-    a = p.with_suffix('log', seperator=True)
+    a = p.with_suffix('log', separator=True)
     assert str(a).endswith('.log')
 
     a = p.with_suffix('.log')

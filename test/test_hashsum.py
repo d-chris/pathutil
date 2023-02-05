@@ -1,9 +1,7 @@
 import pytest
 
-from pathlibutil.hashsum import HashFile
+from pathlibutil.hashing import HashSum
 
 
-def test_hasher():
-    p = HashFile('pathutil.md5')
-
+def test_hashsum():
     pass

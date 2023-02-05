@@ -47,11 +47,11 @@ class Path(pathlib.Path):
                 else:
                     break
 
-    def with_suffix(self: Self, suffix: str, seperator: bool = False) -> Self:
+    def with_suffix(self: Self, suffix: str, separator: bool = False) -> Self:
         try:
             return super().with_suffix(suffix)
         except ValueError as e:
-            if not seperator:
+            if not separator:
                 raise
 
         return super().with_suffix(f".{suffix}")

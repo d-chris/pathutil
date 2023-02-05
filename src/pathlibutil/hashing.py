@@ -5,7 +5,7 @@ from .pathlist import PathList
 from .pathutil import Path
 
 
-class Hasher:
+class HashList:
     def __init__(self, files: str, algorithm: str = None):
         self.files = PathList(files)
         self.algorithm = Path.algorithm(algorithm)
@@ -49,7 +49,7 @@ class Hasher:
         return self.filedigest[item]
 
 
-class HashSum(Hasher):
+class HashSum(HashList):
     def __init__(self, files: Iterable, hashfile: str, algorithm: str = None, comments: str = None):
 
         root = Path(hashfile)
@@ -77,7 +77,7 @@ class HashSum(Hasher):
     def comments(self, comments: str):
         self._comments = self.split_comments(comments)
 
-    def lines(self) -> Tuple[Path, str]:
+    def items(self) -> Tuple[Path, str]:
         for file, hash in self:
             yield file, hash
 
@@ -85,7 +85,8 @@ class HashSum(Hasher):
         if not all(self.hexdigest):
             raise FileNotFoundError(list(self.missing()))
 
-        root = Path(filename).resolve().with_suffix(self.algorithm, '.')
+        root = Path(filename).resolve().with_suffix(
+            self.algorithm, separator=True)
 
         if not comments:
             comments = self.comments
@@ -100,7 +101,7 @@ class HashSum(Hasher):
 
                 f.write('\n')
 
-            for filename, hash in self.lines():
+            for filename, hash in self.items():
                 filename = filename.resolve()
 
                 if filename.is_relative_to(root.parent):
@@ -170,7 +171,7 @@ class HashFile(HashSum):
 
         return digest
 
-    def lines(self) -> Tuple[Path, str]:
+    def items(self) -> Tuple[Path, str]:
         for file, (_, digest) in self:
             yield file, digest
 
