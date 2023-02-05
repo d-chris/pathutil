@@ -47,11 +47,14 @@ class Path(pathlib.Path):
                 else:
                     break
 
-    def with_suffix(self: Self, suffix: str, delimiter: str = None) -> Self:
-        if delimiter:
-            suffix = f"{delimiter}{suffix.lstrip(delimiter)}"
+    def with_suffix(self: Self, suffix: str, seperator: bool = False) -> Self:
+        try:
+            return super().with_suffix(suffix)
+        except ValueError as e:
+            if not seperator:
+                raise
 
-        return super().with_suffix(suffix)
+        return super().with_suffix(f".{suffix}")
 
     def hexdigest(self, algorithm: str = None, *, size: int = None, length: int = None) -> str:
         ''' calculate a hashsum using an algorithm '''

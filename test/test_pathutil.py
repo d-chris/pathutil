@@ -1,9 +1,9 @@
-import pytest
 import hashlib
 import inspect
 import pathlib
-import subprocess
 import time
+
+import pytest
 
 from pathlibutil import Path
 
@@ -340,3 +340,30 @@ def test_mtime(tmp_file, tmp_path):
 
     src2.mkdir()
     assert src2.mtime > 0
+
+
+def test_suffix(tmp_file):
+    p = Path(tmp_file)
+
+    assert str(p).endswith('.txt')
+
+    with pytest.raises(ValueError):
+        a = p.with_suffix('log')
+
+    with pytest.raises(ValueError):
+        a = p.with_suffix('log', seperator=False)
+
+    a = p.with_suffix('log', True)
+    assert str(a).endswith('.log')
+
+    a = p.with_suffix('log', seperator=True)
+    assert str(a).endswith('.log')
+
+    a = p.with_suffix('.log')
+    assert str(a).endswith('.log')
+
+    a = p.with_suffix('', True)
+    assert str(a).endswith(p.stem)
+
+    a = p.with_suffix('')
+    assert str(a).endswith(p.stem)
