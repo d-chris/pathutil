@@ -367,3 +367,25 @@ def test_suffix(tmp_file):
 
     a = p.with_suffix('')
     assert str(a).endswith(p.stem)
+
+
+def test_relative(tmp_file, dst_path):
+    dst = Path(tmp_file).resolve()
+    src = Path(dst_path).resolve()
+
+    with pytest.raises(ValueError):
+        src.relative_to(dst)
+
+    z = src.relative_to(dst, uptree=True)
+    assert str(z).startswith('..')
+
+    # with pytest.raises(ValueError):
+    #     dst.relative_to(src, uptree=True)
+
+    src = src.joinpath('subdir')
+
+    # with pytest.raises(ValueError):
+    #    z = dst.relative_to(src, uptree=True)
+
+    z = src.relative_to(dst, uptree=2)
+    assert str(z).startswith('..\\..\\')

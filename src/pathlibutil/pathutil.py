@@ -3,7 +3,7 @@ import hashlib
 import os
 import pathlib
 import shutil
-from typing import Any, Optional, Tuple, Union, Self
+from typing import Any, Optional, Self, Tuple, Union
 
 
 class Path(pathlib.Path):
@@ -46,6 +46,31 @@ class Path(pathlib.Path):
                     yield chunk
                 else:
                     break
+
+    def relative_to(self: Self, *other, uptree: bool = False) -> Self:
+        try:
+            return super().relative_to(*other)
+        except ValueError as e:
+            if not uptree:
+                raise
+
+            path = Path(*other)
+            relpath = self.__class__(os.path.relpath(self, path))
+
+            if type(uptree) == int:
+                if relpath.parts.count('..') > uptree:
+                    e.add_note(
+                        f"'{path}' is relative_to '{self}', but '{relpath}' exeeds '{uptree}' steps")
+                    raise
+
+        return relpath
+
+    def is_relative_to(self, *other, uptree: bool = False) -> bool:
+        try:
+            self.relative_to(*other, uptree=uptree)
+            return True
+        except ValueError:
+            return False
 
     def with_suffix(self: Self, suffix: str, separator: bool = False) -> Self:
         try:

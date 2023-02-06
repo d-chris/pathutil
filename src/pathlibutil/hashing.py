@@ -50,7 +50,7 @@ class HashList:
 
 
 class HashSum(HashList):
-    def __init__(self, files: Iterable, hashfile: str, algorithm: str = None, comments: str = None):
+    def __init__(self, files: Iterable, hashfile: str, algorithm: str = None, comments: str = None, relative: bool = False):
 
         root = Path(hashfile)
 
@@ -61,13 +61,18 @@ class HashSum(HashList):
 
         self.comments = comments
 
-        self.save(root)
+        self.save(root, relative=relative)
 
-    def split_comments(self, comments: str) -> List[str]:
-        if not comments:
+    @staticmethod
+    def strip_comments(comment: str) -> str:
+        return comment.lstrip('# ')
+
+    @classmethod
+    def split_comments(cls, comments: str) -> List[str]:
+        try:
+            return [cls.strip_comments(line) for line in comments.split('\n')]
+        except AttributeError:
             return list()
-
-        return [line.lstrip('# ') for line in comments.split('\n')]
 
     @property
     def comments(self) -> List[str]:
@@ -81,7 +86,7 @@ class HashSum(HashList):
         for file, hash in self:
             yield file, hash
 
-    def save(self, filename: str, comments: str = None) -> Self:
+    def save(self, filename: str, comments: str = None, relative: bool = False) -> Path:
         if not all(self.hexdigest):
             raise FileNotFoundError(list(self.missing()))
 
@@ -104,12 +109,15 @@ class HashSum(HashList):
             for filename, hash in self.items():
                 filename = filename.resolve()
 
-                if filename.is_relative_to(root.parent):
-                    filename = filename.relative_to(root.parent)
+                try:
+                    filename = filename.relative_to(
+                        root.parent, uptree=relative)
+                except ValueError:
+                    pass
 
                 f.write(f"{hash} *{filename}\n")
 
-        return self
+        return root
 
 
 class HashFile(HashSum):
@@ -132,7 +140,7 @@ class HashFile(HashSum):
                 continue
 
             if line.startswith('#'):
-                self._comments.append(line.lstrip('# '))
+                self._comments.append(self.strip_comments(line))
                 continue
 
             match = self.regex.match(line)
@@ -144,7 +152,7 @@ class HashFile(HashSum):
                 continue
 
             if not file.is_absolute():
-                file = root.parent.joinpath(file)
+                file = root.parent.joinpath(file).resolve()
 
             files.append(file)
             self._hashes.append(hash)
