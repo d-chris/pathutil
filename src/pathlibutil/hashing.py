@@ -34,10 +34,6 @@ class HashList:
 
         return self._hexdigest
 
-    def __iter__(self):
-        for item in self.filedigest.items():
-            yield item
-
     def missing(self):
         for file, hash in self:
             if hash:
@@ -45,23 +41,41 @@ class HashList:
 
             yield file
 
+    def __iter__(self):
+        for item in self.filedigest.items():
+            yield item
+
     def __getitem__(self, item: Path) -> str:
         return self.filedigest[item]
+
+    def __len__(self):
+        return len(self.filedigest)
+
+    def __str__(self):
+        return str(self.filedigest)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({[str(f) for f in self.files]}, algorithm='{self.algorithm}')"
 
 
 class HashSum(HashList):
     def __init__(self, files: Iterable, hashfile: str, algorithm: str = None, comments: str = None, relative: bool = False):
 
-        root = Path(hashfile)
+        self.root = Path(hashfile)
 
         if not algorithm:
-            algorithm = root.suffix
+            algorithm = self.root.suffix
 
         super().__init__(files, algorithm)
 
         self.comments = comments
 
-        self.save(root, relative=relative)
+        self.save(self.root, relative=relative)
+
+    def __repr__(self):
+        files = [str(f) for f in self.files]
+        comment = str('\n').join(self.comments)
+        return f"{self.__class__.__name__}({files}, '{self.root}', algorithm='{self.algorithm}', comments='{comment}')"
 
     @staticmethod
     def strip_comments(comment: str) -> str:
@@ -86,11 +100,11 @@ class HashSum(HashList):
         for file, hash in self:
             yield file, hash
 
-    def save(self, filename: str, comments: str = None, relative: bool = False) -> Path:
+    def save(self, filename: str, comments: str = None, relative: bool = False) -> None:
         if not all(self.hexdigest):
             raise FileNotFoundError(list(self.missing()))
 
-        root = Path(filename).resolve().with_suffix(
+        self.root = Path(filename).resolve().with_suffix(
             self.algorithm, separator=True)
 
         if not comments:
@@ -98,7 +112,7 @@ class HashSum(HashList):
         else:
             comments = self.split_comments(comments)
 
-        with root.open(mode='wt', encoding='utf-8') as f:
+        with self.root.open(mode='wt', encoding='utf-8') as f:
 
             if comments:
                 for line in comments:
@@ -111,13 +125,11 @@ class HashSum(HashList):
 
                 try:
                     filename = filename.relative_to(
-                        root.parent, uptree=relative)
+                        self.root.parent, uptree=relative)
                 except ValueError:
                     pass
 
                 f.write(f"{hash} *{filename}\n")
-
-        return root
 
 
 class HashFile(HashSum):
@@ -130,12 +142,12 @@ class HashFile(HashSum):
         files = list()
         self._hashes = list()
 
-        root = Path(filename).resolve()
+        self.root = Path(filename).resolve()
 
         if not algorithm:
-            algorithm = root.suffix
+            algorithm = self.root.suffix
 
-        for line in root.iter_lines(encoding='utf-8'):
+        for line in self.root.iter_lines(encoding='utf-8'):
             if not line:
                 continue
 
@@ -152,12 +164,15 @@ class HashFile(HashSum):
                 continue
 
             if not file.is_absolute():
-                file = root.parent.joinpath(file).resolve()
+                file = self.root.parent.joinpath(file).resolve()
 
             files.append(file)
             self._hashes.append(hash)
 
         super(HashSum, self).__init__(files, algorithm)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}('{self.root}', algorithm='{self.algorithm}')"
 
     @property
     def hashes(self) -> List[str]:

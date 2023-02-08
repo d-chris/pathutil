@@ -1,4 +1,6 @@
+import itertools
 import re
+from typing import Dict
 
 from .pathutil import Path
 
@@ -87,12 +89,23 @@ class JobSearch(JobFile):
         for pattern, path in super().__iter__():
             pathglob = self._pathglob(pattern)
             if self._skip:
-                files = [
+                filelist = [
                     file.resolve()
                     for file in pathglob
-                    if not file.is_relative_to(self._root)
+                    if not file.is_relative_to(self._skip)
                 ]
             else:
-                files = [file.resolve() for file in pathglob]
+                filelist = [file.resolve() for file in pathglob]
 
-            yield path, files
+            yield path, filelist
+
+    def files(self) -> Dict[Path, str]:
+        result = dict()
+
+        for path, filelist in self:
+
+            z = zip(filelist, itertools.repeat(path))
+
+            result.update(dict(z))
+
+        return result
