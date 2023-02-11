@@ -1,4 +1,6 @@
 import distutils.file_util as dfutil
+import fnmatch
+import functools
 import hashlib
 import os
 import pathlib
@@ -55,7 +57,7 @@ class Path(pathlib.Path):
                 raise
 
             path = Path(*other)
-            relpath = self.__class__(os.path.relpath(self, path))
+            relpath = self.__class__(os.path.relpath(path, self))
 
             if type(uptree) == int:
                 if relpath.parts.count('..') > uptree:
@@ -234,3 +236,43 @@ class Path(pathlib.Path):
             return None
 
         return algorithm
+
+    @staticmethod
+    def fnmatch(iterator, exclude=None):
+        if not exclude:
+            exclude = []
+
+        for item in iterator():
+            for pattern in exclude:
+                if fnmatch.fnmatch(item, pattern):
+                    break
+            else:
+                yield item
+
+    def iterdir(self, exclude=None, recursive=False):
+        iterdir = super().iterdir
+
+        if not exclude and not recursive:
+            yield from iterdir()
+        else:
+            for item in self.fnmatch(iterdir, exclude):
+                if item.is_file() or not recursive:
+                    yield item
+                else:
+                    yield from item.iterdir(recursive=True, exclude=exclude)
+
+    def rglob(self, pattern, exclude=None):
+        rglob = functools.partial(super().rglob, pattern)
+
+        if not exclude:
+            return rglob()
+
+        return self.fnmatch(rglob, exclude)
+
+    def glob(self, pattern, exclude=None):
+        glob = functools.partial(super().glob, pattern)
+
+        if not exclude:
+            return glob()
+
+        return self.fnmatch(glob, exclude)
