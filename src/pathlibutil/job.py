@@ -48,8 +48,14 @@ class JobFile:
                     dest = next(match).group('value')
                 except StopIteration:
                     dest = '.'
+                    exclude = None
+                else:
+                    try:
+                        exclude = next(match).group('value')
+                    except StopIteration:
+                        exclude = None
 
-                lines.append((glob, dest))
+                lines.append((glob, dest, exclude))
             else:
                 self._lines = lines
                 self._comments = comments
@@ -68,44 +74,29 @@ class JobFile:
 
 
 class JobSearch(JobFile):
-    def __init__(self, jobfile, rootdir=None, skip=None, recusrive=True):
+    def __init__(self, jobfile, rootdir=None, exclude=None):
         super().__init__(jobfile)
 
-        self._skip = skip
-        if rootdir:
-            self._root = Path(rootdir)
-        else:
+        if not rootdir:
             self._root = self._job.parent
-
-        if recusrive:
-            self._pathglob = self._root.rglob
         else:
-            self._pathglob = self._root.glob
+            self._root = Path(rootdir)
+
+        self._exclude = exclude
 
     def __repr__(self):
-        return f"{self.__class__.__name__}('{self._job}', rootdir='{self._root}')"
+        return f"{self.__class__.__name__}('{self._job}', rootdir='{self._root}', exclude={self._exclude})"
 
     def __iter__(self):
-        for pattern, path in super().__iter__():
-            pathglob = self._pathglob(pattern)
-            if self._skip:
-                filelist = [
-                    file.resolve()
-                    for file in pathglob
-                    if not file.is_relative_to(self._skip)
-                ]
-            else:
-                filelist = [file.resolve() for file in pathglob]
-
-            yield path, filelist
-
-    def files(self) -> Dict[Path, str]:
-        result = dict()
-
-        for path, filelist in self:
-
-            z = zip(filelist, itertools.repeat(path))
-
-            result.update(dict(z))
-
-        return result
+        for pattern, path, exclude in super().__iter__():
+            
+            try:
+                exclude = exclude.split(';')
+                exclude.extend(self._exclude)
+            except AttributeError:
+                exclude = self._exclude
+            except TypeError:
+                pass
+                
+            for item in Path(self._root).rglob(pattern, exclude):
+                yield item, path
