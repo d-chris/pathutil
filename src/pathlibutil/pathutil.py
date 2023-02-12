@@ -240,14 +240,14 @@ class Path(pathlib.Path):
     @staticmethod
     def fnmatch(iterator, exclude=None):
         if not exclude:
-            exclude = []
-
-        for item in iterator():
-            for pattern in exclude:
-                if fnmatch.fnmatch(item, pattern):
-                    break
-            else:
-                yield item
+            yield from iterator()
+        else:
+            for item in iterator():
+                for pattern in exclude:
+                    if fnmatch.fnmatch(item, pattern):
+                        break
+                else:
+                    yield item
 
     def iterdir(self, exclude=None, recursive=False):
         iterdir = super().iterdir

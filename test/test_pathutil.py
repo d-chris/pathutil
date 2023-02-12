@@ -29,16 +29,33 @@ def dst_path(tmp_path: pathlib.Path) -> str:
 
 @pytest.fixture()
 def dir_tree(tmp_path: pathlib.Path) -> str:
-    dir = tmp_path / 'dir1'
-    dir.mkdir()
+    files = [
+        'dir1/file1.txt',
+        'dir1/file2.txt'
+    ]
 
-    file = dir / 'file1.txt'
-    file.touch()
+    for f in map(lambda x: pathlib.Path(tmp_path, x), files):
+        f.parent.mkdir(exist_ok=True)
+        f.touch(exist_ok=True)
 
-    file = dir / 'file2.txt'
-    file.touch()
+    return str(f.parent)
 
-    return str(dir)
+
+@pytest.fixture()
+def tmp_dir(tmp_path: pathlib.Path):
+    files = [
+        'fileA.txt',
+        'file1.py',
+        '.git/HEAD',
+        '.git/index',
+        '.venv/index'
+    ]
+
+    for f in map(lambda x: pathlib.Path(tmp_path, x), files):
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.touch(exist_ok=True)
+
+    return str(tmp_path)
 
 
 def test_delete_recursive(dir_tree: str):
@@ -389,3 +406,59 @@ def test_relative(tmp_file, dst_path):
 
     z = src.relative_to(dst, uptree=2)
     assert str(z).startswith('..\\..\\')
+
+
+def test_fnmatch():
+    def generator():
+        files = [
+            'fileA.txt', 'fileB.txt', 'fileC.txt',
+            'file1.py', 'file2.py'
+        ]
+
+        for f in files:
+            yield f
+
+    for i in Path.fnmatch(generator, exclude=['*.py']):
+        assert str(i).endswith('.txt')
+
+    result = list(Path.fnmatch(generator))
+    assert len(result) == 5
+
+
+def test_iterdir(tmp_dir):
+
+    p = Path(tmp_dir)
+
+    result = list(p.iterdir())
+    assert len(result) == 4
+
+    result = list(p.iterdir(recursive=True))
+    assert len(result) == 5
+
+    result = list(p.iterdir(exclude=['*/file?.*']))
+    assert len(result) == 2
+
+    result = list(p.iterdir(recursive=True, exclude=['*/file?.txt']))
+    assert len(result) == 4
+
+
+def test_glob(tmp_dir):
+
+    p = Path(tmp_dir)
+
+    result = list(p.glob('file*'))
+    assert len(result) == 2
+
+    result = list(p.glob('file*', exclude=['*.txt']))
+    assert len(result) == 1
+
+
+def test_rglob(tmp_dir):
+
+    p = Path(tmp_dir)
+
+    result = list(p.rglob('index'))
+    assert len(result) == 2
+
+    result = list(p.rglob('index', exclude=['*/.venv/*']))
+    assert len(result) == 1
