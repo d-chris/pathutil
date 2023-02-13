@@ -442,6 +442,15 @@ def test_iterdir(tmp_dir):
     assert len(result) == 4
 
 
+def test_iterdirempty(tmp_dir):
+    p = Path(tmp_dir)
+    i = p.joinpath('empty')
+    i.mkdir()
+
+    result = list(p.iterdir(recursive=True))
+    assert len(result) == 6
+
+
 def test_glob(tmp_dir):
 
     p = Path(tmp_dir)

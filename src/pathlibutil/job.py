@@ -88,8 +88,10 @@ class JobSearch(JobFile):
         return f"{self.__class__.__name__}('{self._job}', rootdir='{self._root}', exclude={self._exclude})"
 
     def __iter__(self):
+        self._hits = list()
+
         for pattern, path, exclude in super().__iter__():
-            
+
             try:
                 exclude = exclude.split(';')
                 exclude.extend(self._exclude)
@@ -97,6 +99,16 @@ class JobSearch(JobFile):
                 exclude = self._exclude
             except TypeError:
                 pass
-                
-            for item in Path(self._root).rglob(pattern, exclude):
+
+            i = 0
+            for i, item in enumerate(Path(self._root).rglob(pattern, exclude), start=1):
                 yield item, path
+            else:
+                self._hits.append(i)
+
+    @property
+    def hits(self):
+        try:
+            return self._hits
+        except AttributeError:
+            return [0] * len(self)

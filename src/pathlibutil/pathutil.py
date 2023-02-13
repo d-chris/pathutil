@@ -255,11 +255,15 @@ class Path(pathlib.Path):
         if not exclude and not recursive:
             yield from iterdir()
         else:
-            for item in self.fnmatch(iterdir, exclude):
+            i = 0
+            for i, item in enumerate(self.fnmatch(iterdir, exclude), start=1):
                 if item.is_file() or not recursive:
                     yield item
                 else:
                     yield from item.iterdir(recursive=True, exclude=exclude)
+            else:
+                if not i:
+                    yield self
 
     def rglob(self, pattern, exclude=None):
         rglob = functools.partial(super().rglob, pattern)
