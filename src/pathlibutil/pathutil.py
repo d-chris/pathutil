@@ -280,3 +280,18 @@ class Path(pathlib.Path):
             return glob()
 
         return self.fnmatch(glob, exclude)
+
+    def getsize(self, recursive=True, exclude=None):
+        def size(p: Path) -> int:
+            if p.is_file():
+                return p.stat().st_size
+
+            return 0
+
+        if self.is_file():
+            return size(self)
+        else:
+            file_size = map(size,
+                            self.iterdir(recursive=recursive, exclude=exclude))
+
+            return sum(file_size)

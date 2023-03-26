@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pathlibutil"
-version = "0.0.4"
+version = "0.0.5"
 authors = [{ name = "Christoph Dörrer" }]
 description = "extend pathlib with some handy features"
 readme = "README.md"
