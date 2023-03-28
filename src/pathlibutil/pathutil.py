@@ -5,7 +5,7 @@ import hashlib
 import os
 import pathlib
 import shutil
-from typing import Any, Optional, Self, Tuple, Union
+from typing import Any, Optional, Self, Tuple, Union, Iterable
 
 
 class Path(pathlib.Path):
@@ -249,7 +249,7 @@ class Path(pathlib.Path):
                 else:
                     yield item
 
-    def iterdir(self, exclude=None, recursive=False):
+    def iterdir(self, exclude: Iterable[str] = None, recursive: bool = False):
         iterdir = super().iterdir
 
         if not exclude and not recursive:
@@ -281,17 +281,20 @@ class Path(pathlib.Path):
 
         return self.fnmatch(glob, exclude)
 
-    def getsize(self, recursive=True, exclude=None):
+    def getsize(self, *, recursive: bool = True, exclude: Iterable[str] = None) -> int:
         def size(p: Path) -> int:
-            if p.is_file():
-                return p.stat().st_size
+            try:
+                if p.is_file():
+                    return p.stat().st_size
+            except OSError:
+                return 0
 
             return 0
 
-        if self.is_file():
-            return size(self)
-        else:
-            file_size = map(size,
-                            self.iterdir(recursive=recursive, exclude=exclude))
+        try:
+            iter_dir = self.iterdir(recursive=recursive, exclude=exclude)
+            iter_size = map(size, iter_dir)
 
-            return sum(file_size)
+            return sum(iter_size)
+        except NotADirectoryError:
+            return size(self)
